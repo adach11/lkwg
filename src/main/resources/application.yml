@@ -16,7 +16,7 @@ spring:
     show-sql: true      # 显示SQL语句
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true  # 格式化SQL
 
   # Redis配置（用于匹配队列和缓存）

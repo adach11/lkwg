@@ -7,7 +7,7 @@ import com.seele.game.enums.PetRarity;
 import com.seele.game.enums.PetStatus;
 import com.seele.game.enums.PetType;
 import com.seele.game.enums.SkillType;
-import com.yourname.petbattle.enums.*;
+import com.seele.game.enums.*;
 import com.seele.game.repository.PetLevelSkillRepository;
 import com.seele.game.repository.PetTemplateRepository;
 import com.seele.game.repository.SkillRepository;
