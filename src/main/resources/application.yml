@@ -4,20 +4,23 @@ spring:
 
   # 数据库配置
   datasource:
-    url: jdbc:mysql://localhost:3306/pet_battle?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://47.109.144.244:3306/lkwg-dev?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: qqhhnmmp228
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # JPA配置
-  jpa:
-    hibernate:
-      ddl-auto: update  # 自动创建/更新表结构
-    show-sql: true      # 显示SQL语句
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true  # 格式化SQL
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL
+    map-underscore-to-camel-case: true  # 下划线转驼峰
+  global-config:
+    db-config:
+      id-type: auto  # 主键自增
+      logic-delete-field: deleted  # 逻辑删除字段
+      logic-delete-value: 1  # 删除值
+      logic-not-delete-value: 0  # 未删除值
+  mapper-locations: classpath*:/mapper/**/*.xml  # Mapper XML位置
 
   # Redis配置（用于匹配队列和缓存）
   data:
@@ -35,6 +38,5 @@ server:
 logging:
   level:
     root: INFO
-    com.yourname.petbattle: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.seele.petbattle: DEBUG
+    com.seele.petbattle.mapper: DEBUG  # Mapper日志

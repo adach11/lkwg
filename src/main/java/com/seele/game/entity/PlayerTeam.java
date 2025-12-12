@@ -1,6 +1,6 @@
 package com.seele.game.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,28 +11,23 @@ import java.time.LocalDateTime;
  * 玩家队伍
  * 玩家可以组建队伍（最多6只宠物）
  */
-@Entity
-@Table(name = "player_team",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"player_id", "position"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@TableName("player_team")
 public class PlayerTeam {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
      * 玩家ID
      */
-    @Column(nullable = false)
     private Long playerId;
 
     /**
      * 队伍位置 (1-6)
      */
-    @Column(nullable = false)
     private Integer position;
 
     /**
@@ -43,35 +38,22 @@ public class PlayerTeam {
     /**
      * 队伍名称
      */
-    @Column(length = 50)
     private String teamName;
 
     /**
      * 是否为当前使用的队伍
      */
-    @Column(nullable = false)
-    private Boolean isActive = false;
+    private Boolean isActive;
 
     /**
      * 创建时间
      */
-    @Column(nullable = false, updatable = false)
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
     /**
      * 更新时间
      */
-    @Column(nullable = false)
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

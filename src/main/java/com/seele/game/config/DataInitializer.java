@@ -8,9 +8,9 @@ import com.seele.game.enums.PetStatus;
 import com.seele.game.enums.PetType;
 import com.seele.game.enums.SkillType;
 import com.seele.game.enums.*;
-import com.seele.game.repository.PetLevelSkillRepository;
-import com.seele.game.repository.PetTemplateRepository;
-import com.seele.game.repository.SkillRepository;
+import com.seele.game.mapper.PetLevelSkillMapper;
+import com.seele.game.mapper.PetTemplateMapper;
+import com.seele.game.mapper.SkillMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -26,9 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    private final PetTemplateRepository petTemplateRepository;
-    private final SkillRepository skillRepository;
-    private final PetLevelSkillRepository petLevelSkillRepository;
+    private final PetTemplateMapper petTemplateMapper;
+    private final SkillMapper skillMapper;
+    private final PetLevelSkillMapper petLevelSkillMapper;
 
     @Override
     @Transactional
@@ -36,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
         log.info("开始初始化游戏数据...");
 
         // 检查是否已初始化
-        if (petTemplateRepository.count() > 0) {
+        if (petTemplateMapper.selectCount(null) > 0) {
             log.info("数据已存在，跳过初始化");
             return;
         }
@@ -105,7 +105,7 @@ public class DataInitializer implements CommandLineRunner {
         // 龙系技能
         createSkill("龙之怒", SkillType.MAGIC, PetType.DRAGON, 40, 100, 10, 0,
                    null, 0, "释放龙之力量");
-        createSkill("龙爪", SkillType.PHYSICAL, PetType.DRAGON, 80, 100, 15, 0,
+        createSkill("龙之爪牙", SkillType.PHYSICAL, PetType.DRAGON, 80, 100, 15, 0,
                    null, 0, "用锋利的爪子撕裂对手");
         createSkill("龙之波动", SkillType.MAGIC, PetType.DRAGON, 85, 100, 10, 0,
                    null, 0, "释放龙之冲击波");
@@ -120,7 +120,7 @@ public class DataInitializer implements CommandLineRunner {
         createSkill("睡觉", SkillType.STATUS, PetType.FIRE, 0, 100, 10, 0,
                    null, 0, "睡觉恢复HP");
 
-        log.info("初始化了{}个技能", skillRepository.count());
+        log.info("初始化了{}个技能", skillMapper.selectCount(null));
     }
 
     /**
@@ -183,7 +183,7 @@ public class DataInitializer implements CommandLineRunner {
                  3.2, 3.2, 2.2, 5.0, 2.5, 4.5,
                  "传说中的电系宠物，速度和魔攻惊人");
 
-        log.info("初始化了{}只宠物", petTemplateRepository.count());
+        log.info("初始化了{}只宠物", petTemplateMapper.selectCount(null));
     }
 
     /**
@@ -193,11 +193,11 @@ public class DataInitializer implements CommandLineRunner {
         log.info("初始化宠物技能学习配置...");
 
         // 火焰犬技能
-        PetTemplate fireDog = petTemplateRepository.findByName("火焰犬");
-        Skill spark = skillRepository.findByName("火花");
-        Skill flamethrower = skillRepository.findByName("火焰喷射");
-        Skill tackle = skillRepository.findByName("撞击");
-        Skill fireCharge = skillRepository.findByName("炽热冲锋");
+        PetTemplate fireDog = petTemplateMapper.findByName("火焰犬");
+        Skill spark = skillMapper.findByName("火花");
+        Skill flamethrower = skillMapper.findByName("火焰喷射");
+        Skill tackle = skillMapper.findByName("撞击");
+        Skill fireCharge = skillMapper.findByName("炽热冲锋");
 
         createPetLevelSkill(fireDog.getId(), tackle.getId(), 1);
         createPetLevelSkill(fireDog.getId(), spark.getId(), 5);
@@ -205,10 +205,10 @@ public class DataInitializer implements CommandLineRunner {
         createPetLevelSkill(fireDog.getId(), fireCharge.getId(), 25);
 
         // 水灵龟技能
-        PetTemplate waterTurtle = petTemplateRepository.findByName("水灵龟");
-        Skill waterGun = skillRepository.findByName("水枪");
-        Skill iceBeam = skillRepository.findByName("冰冻光线");
-        Skill waterPulse = skillRepository.findByName("水之波动");
+        PetTemplate waterTurtle = petTemplateMapper.findByName("水灵龟");
+        Skill waterGun = skillMapper.findByName("水枪");
+        Skill iceBeam = skillMapper.findByName("冰冻光线");
+        Skill waterPulse = skillMapper.findByName("水之波动");
 
         createPetLevelSkill(waterTurtle.getId(), tackle.getId(), 1);
         createPetLevelSkill(waterTurtle.getId(), waterGun.getId(), 5);
@@ -216,10 +216,10 @@ public class DataInitializer implements CommandLineRunner {
         createPetLevelSkill(waterTurtle.getId(), iceBeam.getId(), 20);
 
         // 青叶蛇技能
-        PetTemplate grassSnake = petTemplateRepository.findByName("青叶蛇");
-        Skill vineWhip = skillRepository.findByName("藤鞭");
-        Skill razorLeaf = skillRepository.findByName("飞叶快刀");
-        Skill leechSeed = skillRepository.findByName("寄生种子");
+        PetTemplate grassSnake = petTemplateMapper.findByName("青叶蛇");
+        Skill vineWhip = skillMapper.findByName("藤鞭");
+        Skill razorLeaf = skillMapper.findByName("飞叶快刀");
+        Skill leechSeed = skillMapper.findByName("寄生种子");
 
         createPetLevelSkill(grassSnake.getId(), tackle.getId(), 1);
         createPetLevelSkill(grassSnake.getId(), vineWhip.getId(), 5);
@@ -227,16 +227,16 @@ public class DataInitializer implements CommandLineRunner {
         createPetLevelSkill(grassSnake.getId(), leechSeed.getId(), 15);
 
         // 雷电鼠技能
-        PetTemplate elecMouse = petTemplateRepository.findByName("雷电鼠");
-        Skill thunder = skillRepository.findByName("电击");
-        Skill quickAttack = skillRepository.findByName("电光一闪");
-        Skill thunderbolt = skillRepository.findByName("十万伏特");
+        PetTemplate elecMouse = petTemplateMapper.findByName("雷电鼠");
+        Skill thunder = skillMapper.findByName("电击");
+        Skill quickAttack = skillMapper.findByName("电光一闪");
+        Skill thunderbolt = skillMapper.findByName("十万伏特");
 
         createPetLevelSkill(elecMouse.getId(), quickAttack.getId(), 1);
         createPetLevelSkill(elecMouse.getId(), thunder.getId(), 8);
         createPetLevelSkill(elecMouse.getId(), thunderbolt.getId(), 20);
 
-        log.info("初始化了{}条宠物技能配置", petLevelSkillRepository.count());
+        log.info("初始化了{}条宠物技能配置", petLevelSkillMapper.selectCount(null));
     }
 
     private void createSkill(String name, SkillType skillType, PetType petType,
@@ -253,7 +253,7 @@ public class DataInitializer implements CommandLineRunner {
         skill.setStatusEffect(statusEffect);
         skill.setEffectChance(effectChance);
         skill.setDescription(description);
-        skillRepository.save(skill);
+        skillMapper.insert(skill);
     }
 
     private void createPet(String name, PetType type, PetRarity rarity, boolean isStarter,
@@ -280,7 +280,7 @@ public class DataInitializer implements CommandLineRunner {
         pet.setSpeedGrowth(spdGrowth);
         pet.setDescription(description);
         pet.setImageUrl("/images/pets/" + name + ".png");
-        petTemplateRepository.save(pet);
+        petTemplateMapper.insert(pet);
     }
 
     private void createPetLevelSkill(Long petTemplateId, Long skillId, int learnLevel) {
@@ -288,6 +288,6 @@ public class DataInitializer implements CommandLineRunner {
         pls.setPetTemplateId(petTemplateId);
         pls.setSkillId(skillId);
         pls.setLearnLevel(learnLevel);
-        petLevelSkillRepository.save(pls);
+        petLevelSkillMapper.insert(pls);
     }
 }

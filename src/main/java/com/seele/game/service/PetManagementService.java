@@ -4,9 +4,9 @@ import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.PlayerPet;
 import com.seele.game.entity.PlayerTeam;
 import com.seele.game.enums.PetStatus;
-import com.seele.game.repository.PetTemplateRepository;
-import com.seele.game.repository.PlayerPetRepository;
-import com.seele.game.repository.PlayerTeamRepository;
+import com.seele.game.mapper.PetTemplateMapper;
+import com.seele.game.mapper.PlayerPetMapper;
+import com.seele.game.mapper.PlayerTeamMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,9 +23,9 @@ import java.util.List;
 @Slf4j
 public class PetManagementService {
 
-    private final PetTemplateRepository petTemplateRepository;
-    private final PlayerPetRepository playerPetRepository;
-    private final PlayerTeamRepository playerTeamRepository;
+    private final PetTemplateMapper petTemplateMapper;
+    private final PlayerPetMapper playerPetMapper;
+    private final PlayerTeamMapper playerTeamMapper;
     private final PetGrowthService petGrowthService;
     private final SkillLearnService skillLearnService;
 
@@ -33,7 +33,7 @@ public class PetManagementService {
      * 获取所有初始宠物模板
      */
     public List<PetTemplate> getStarterPets() {
-        return petTemplateRepository.findByIsStarterTrue();
+        return petTemplateMapper.findByIsStarterTrue();
     }
 
     /**
@@ -45,15 +45,17 @@ public class PetManagementService {
      */
     @Transactional
     public PlayerPet chooseStarterPet(Long playerId, Long petTemplateId, String nickname) {
-        PetTemplate template = petTemplateRepository.findById(petTemplateId)
-                .orElseThrow(() -> new IllegalArgumentException("宠物模板不存在"));
+        PetTemplate template = petTemplateMapper.selectById(petTemplateId);
+        if (template == null) {
+            throw new IllegalArgumentException("宠物模板不存在");
+        }
 
         if (!template.getIsStarter()) {
             throw new IllegalArgumentException("该宠物不是初始宠物");
         }
 
         // 检查玩家是否已有宠物
-        long petCount = playerPetRepository.countByPlayerId(playerId);
+        long petCount = playerPetMapper.countByPlayerId(playerId);
         if (petCount > 0) {
             throw new IllegalArgumentException("玩家已有宠物，不能重复选择初始宠物");
         }
@@ -82,8 +84,10 @@ public class PetManagementService {
      */
     @Transactional
     public PlayerPet createPet(Long playerId, Long petTemplateId, String nickname, int level) {
-        PetTemplate template = petTemplateRepository.findById(petTemplateId)
-                .orElseThrow(() -> new IllegalArgumentException("宠物模板不存在"));
+        PetTemplate template = petTemplateMapper.selectById(petTemplateId);
+        if (template == null) {
+            throw new IllegalArgumentException("宠物模板不存在");
+        }
 
         PlayerPet pet = new PlayerPet();
         pet.setPlayerId(playerId);
@@ -106,11 +110,12 @@ public class PetManagementService {
         pet.setFriendship(50);
 
         // 保存后计算属性
-        pet = playerPetRepository.save(pet);
+        playerPetMapper.insert(pet);
         petGrowthService.recalculateStats(pet);
         pet.setCurrentHp(pet.getMaxHp());
+        playerPetMapper.updateById(pet);
 
-        return playerPetRepository.save(pet);
+        return pet;
     }
 
     /**
@@ -126,28 +131,37 @@ public class PetManagementService {
         }
 
         // 检查宠物是否属于该玩家
-        PlayerPet pet = playerPetRepository.findById(playerPetId)
-                .orElseThrow(() -> new IllegalArgumentException("宠物不存在"));
+        PlayerPet pet = playerPetMapper.selectById(playerPetId);
+        if (pet == null) {
+            throw new IllegalArgumentException("宠物不存在");
+        }
 
         if (!pet.getPlayerId().equals(playerId)) {
             throw new IllegalArgumentException("该宠物不属于当前玩家");
         }
 
         // 检查该位置是否已有宠物
-        PlayerTeam teamSlot = playerTeamRepository.findByPlayerIdAndPosition(playerId, position)
-                .orElse(new PlayerTeam());
+        PlayerTeam teamSlot = playerTeamMapper.findByPlayerIdAndPosition(playerId, position);
+        boolean isNewSlot = (teamSlot == null);
+        if (isNewSlot) {
+            teamSlot = new PlayerTeam();
+        }
 
         teamSlot.setPlayerId(playerId);
         teamSlot.setPosition(position);
         teamSlot.setPlayerPetId(playerPetId);
 
         // 如果是第一只宠物，设为激活队伍
-        long teamCount = playerTeamRepository.findByPlayerIdOrderByPosition(playerId).size();
+        long teamCount = playerTeamMapper.findByPlayerIdOrderByPosition(playerId).size();
         if (teamCount == 0) {
             teamSlot.setIsActive(true);
         }
 
-        playerTeamRepository.save(teamSlot);
+        if (isNewSlot) {
+            playerTeamMapper.insert(teamSlot);
+        } else {
+            playerTeamMapper.updateById(teamSlot);
+        }
         log.info("将宠物{}添加到玩家{}的队伍位置{}", playerPetId, playerId, position);
     }
 
@@ -156,11 +170,13 @@ public class PetManagementService {
      */
     @Transactional
     public void removeFromTeam(Long playerId, int position) {
-        PlayerTeam teamSlot = playerTeamRepository.findByPlayerIdAndPosition(playerId, position)
-                .orElseThrow(() -> new IllegalArgumentException("该位置没有宠物"));
+        PlayerTeam teamSlot = playerTeamMapper.findByPlayerIdAndPosition(playerId, position);
+        if (teamSlot == null) {
+            throw new IllegalArgumentException("该位置没有宠物");
+        }
 
         teamSlot.setPlayerPetId(null);
-        playerTeamRepository.save(teamSlot);
+        playerTeamMapper.updateById(teamSlot);
         log.info("从玩家{}的队伍位置{}移除宠物", playerId, position);
     }
 
@@ -168,21 +184,21 @@ public class PetManagementService {
      * 获取玩家的队伍
      */
     public List<PlayerTeam> getPlayerTeam(Long playerId) {
-        return playerTeamRepository.findByPlayerIdOrderByPosition(playerId);
+        return playerTeamMapper.findByPlayerIdOrderByPosition(playerId);
     }
 
     /**
      * 获取玩家的所有宠物
      */
     public List<PlayerPet> getPlayerPets(Long playerId) {
-        return playerPetRepository.findByPlayerId(playerId);
+        return playerPetMapper.findByPlayerId(playerId);
     }
 
     /**
      * 获取玩家所有未昏厥的宠物
      */
     public List<PlayerPet> getActivePets(Long playerId) {
-        return playerPetRepository.findActivePetsByPlayerId(playerId);
+        return playerPetMapper.findActivePetsByPlayerId(playerId);
     }
 
     /**
@@ -190,11 +206,13 @@ public class PetManagementService {
      */
     @Transactional
     public void healPet(Long playerPetId) {
-        PlayerPet pet = playerPetRepository.findById(playerPetId)
-                .orElseThrow(() -> new IllegalArgumentException("宠物不存在"));
+        PlayerPet pet = playerPetMapper.selectById(playerPetId);
+        if (pet == null) {
+            throw new IllegalArgumentException("宠物不存在");
+        }
 
         pet.fullRestore();
-        playerPetRepository.save(pet);
+        playerPetMapper.updateById(pet);
 
         // 恢复所有技能PP
         skillLearnService.restoreAllPp(playerPetId);
@@ -207,12 +225,12 @@ public class PetManagementService {
      */
     @Transactional
     public void healAllPets(Long playerId) {
-        List<PlayerPet> pets = playerPetRepository.findByPlayerId(playerId);
+        List<PlayerPet> pets = playerPetMapper.findByPlayerId(playerId);
         pets.forEach(pet -> {
             pet.fullRestore();
             skillLearnService.restoreAllPp(pet.getId());
+            playerPetMapper.updateById(pet);
         });
-        playerPetRepository.saveAll(pets);
         log.info("完全治疗玩家{}的所有宠物", playerId);
     }
 }

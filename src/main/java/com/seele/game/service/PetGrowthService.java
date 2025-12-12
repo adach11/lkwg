@@ -3,8 +3,8 @@ package com.seele.game.service;
 import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.PlayerPet;
 import com.seele.game.enums.StatType;
-import com.seele.game.repository.PetTemplateRepository;
-import com.seele.game.repository.PlayerPetRepository;
+import com.seele.game.mapper.PetTemplateMapper;
+import com.seele.game.mapper.PlayerPetMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,8 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class PetGrowthService {
 
-    private final PlayerPetRepository playerPetRepository;
-    private final PetTemplateRepository petTemplateRepository;
+    private final PlayerPetMapper playerPetMapper;
+    private final PetTemplateMapper petTemplateMapper;
     private final SkillLearnService skillLearnService;
 
     /**
@@ -61,7 +61,7 @@ public class PetGrowthService {
             leveledUp = true;
         }
 
-        playerPetRepository.save(playerPet);
+        playerPetMapper.updateById(playerPet);
         return leveledUp;
     }
 
@@ -93,8 +93,10 @@ public class PetGrowthService {
      */
     @Transactional
     public void recalculateStats(PlayerPet playerPet) {
-        PetTemplate template = petTemplateRepository.findById(playerPet.getPetTemplateId())
-                .orElseThrow(() -> new IllegalArgumentException("宠物模板不存在"));
+        PetTemplate template = petTemplateMapper.selectById(playerPet.getPetTemplateId());
+        if (template == null) {
+            throw new IllegalArgumentException("宠物模板不存在");
+        }
 
         int level = playerPet.getLevel();
 

@@ -78,7 +78,11 @@ public class PetController {
             PlayerPet pet = petManagementService.getPlayerPets(1L).stream()
                     .filter(p -> p.getId().equals(request.getPlayerPetId()))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("宠物不存在"));
+                    .orElse(null);
+
+            if (pet == null) {
+                throw new IllegalArgumentException("宠物不存在");
+            }
 
             boolean leveledUp = petGrowthService.addExp(pet, request.getExp());
             String message = leveledUp ? "获得经验并升级了！" : "获得经验值";
