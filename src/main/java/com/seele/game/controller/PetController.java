@@ -6,9 +6,9 @@ import com.seele.game.dto.PetCreateRequest;
 import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.PlayerPet;
 import com.seele.game.entity.PlayerPetSkill;
-import com.seele.game.service.PetGrowthService;
-import com.seele.game.service.PetManagementService;
-import com.seele.game.service.SkillLearnService;
+import com.seele.game.service.IPetGrowthService;
+import com.seele.game.service.IPetManagementService;
+import com.seele.game.service.ISkillLearnService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PetController {
 
-    private final PetManagementService petManagementService;
-    private final PetGrowthService petGrowthService;
-    private final SkillLearnService skillLearnService;
+    private final IPetManagementService petManagementService;
+    private final IPetGrowthService petGrowthService;
+    private final ISkillLearnService skillLearnService;
 
     /**
      * 获取所有初始宠物

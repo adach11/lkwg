@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.PlayerPetMapper">
+
+    <!-- 查找某个玩家的所有宠物 -->
+    <select id="findByPlayerId" resultType="com.seele.game.entity.PlayerPet">
+        SELECT * FROM player_pet
+        WHERE player_id = #{playerId}
+    </select>
+
+    <!-- 查找某个玩家的指定宠物模板实例 -->
+    <select id="findByPlayerIdAndPetTemplateId" resultType="com.seele.game.entity.PlayerPet">
+        SELECT * FROM player_pet
+        WHERE player_id = #{playerId}
+        AND pet_template_id = #{petTemplateId}
+    </select>
+
+    <!-- 查找玩家宠物数量 -->
+    <select id="countByPlayerId" resultType="long">
+        SELECT COUNT(*) FROM player_pet
+        WHERE player_id = #{playerId}
+    </select>
+
+    <!-- 查找玩家所有未昏厥的宠物 -->
+    <select id="findActivePetsByPlayerId" resultType="com.seele.game.entity.PlayerPet">
+        SELECT * FROM player_pet
+        WHERE player_id = #{playerId}
+        AND current_hp > 0
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.PlayerPet">
+        SELECT * FROM player_pet WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM player_pet
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.PlayerPet"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO player_pet (
+            player_id, pet_template_id, nickname, level, exp, next_level_exp,
+            iv_hp, iv_attack, iv_defense, iv_magic_attack, iv_magic_defense, iv_speed,
+            current_hp, max_hp, attack, defense, magic_attack, magic_defense, speed,
+            status, friendship, created_at, updated_at
+        ) VALUES (
+            #{playerId}, #{petTemplateId}, #{nickname}, #{level}, #{exp}, #{nextLevelExp},
+            #{ivHp}, #{ivAttack}, #{ivDefense}, #{ivMagicAttack}, #{ivMagicDefense}, #{ivSpeed},
+            #{currentHp}, #{maxHp}, #{attack}, #{defense}, #{magicAttack}, #{magicDefense}, #{speed},
+            #{status}, #{friendship}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.PlayerPet">
+        UPDATE player_pet SET
+            player_id = #{playerId},
+            pet_template_id = #{petTemplateId},
+            nickname = #{nickname},
+            level = #{level},
+            exp = #{exp},
+            next_level_exp = #{nextLevelExp},
+            iv_hp = #{ivHp},
+            iv_attack = #{ivAttack},
+            iv_defense = #{ivDefense},
+            iv_magic_attack = #{ivMagicAttack},
+            iv_magic_defense = #{ivMagicDefense},
+            iv_speed = #{ivSpeed},
+            current_hp = #{currentHp},
+            max_hp = #{maxHp},
+            attack = #{attack},
+            defense = #{defense},
+            magic_attack = #{magicAttack},
+            magic_defense = #{magicDefense},
+            speed = #{speed},
+            status = #{status},
+            friendship = #{friendship},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

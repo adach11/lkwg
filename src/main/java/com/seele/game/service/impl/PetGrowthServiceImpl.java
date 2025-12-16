@@ -1,50 +1,42 @@
-package com.seele.game.service;
+package com.seele.game.service.impl;
 
 import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.PlayerPet;
 import com.seele.game.enums.StatType;
 import com.seele.game.mapper.PetTemplateMapper;
 import com.seele.game.mapper.PlayerPetMapper;
+import com.seele.game.service.IPetGrowthService;
+import com.seele.game.service.ISkillLearnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 宠物成长服务
+ * 宠物成长服务实现
  * 负责经验值、升级、属性计算等
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PetGrowthService {
+public class PetGrowthServiceImpl implements IPetGrowthService {
 
     private final PlayerPetMapper playerPetMapper;
     private final PetTemplateMapper petTemplateMapper;
-    private final SkillLearnService skillLearnService;
+    private final ISkillLearnService skillLearnService;
 
-    /**
-     * 计算升级到指定等级所需的总经验值
-     * 使用中速成长曲线：exp = level^3
-     */
+    @Override
     public int calculateExpForLevel(int level) {
         if (level <= 1) return 0;
         return (int) Math.pow(level, 3);
     }
 
-    /**
-     * 计算两个等级之间需要的经验值
-     */
+    @Override
     public int calculateExpBetweenLevels(int fromLevel, int toLevel) {
         return calculateExpForLevel(toLevel) - calculateExpForLevel(fromLevel);
     }
 
-    /**
-     * 增加经验值，可能触发升级
-     * @param playerPet 玩家宠物
-     * @param expGained 获得的经验值
-     * @return 是否升级
-     */
+    @Override
     @Transactional
     public boolean addExp(PlayerPet playerPet, int expGained) {
         if (playerPet.getLevel() >= 100) {
@@ -87,10 +79,7 @@ public class PetGrowthService {
         skillLearnService.checkAndLearnSkillsOnLevelUp(playerPet, newLevel);
     }
 
-    /**
-     * 重新计算宠物的所有属性
-     * 公式：最终属性 = (基础值 + 成长率 × 等级 + IV) × 倍率
-     */
+    @Override
     @Transactional
     public void recalculateStats(PlayerPet playerPet) {
         PetTemplate template = petTemplateMapper.selectById(playerPet.getPetTemplateId());
@@ -176,16 +165,12 @@ public class PetGrowthService {
         };
     }
 
-    /**
-     * 生成随机个体值 (0-31)
-     */
+    @Override
     public int generateRandomIV() {
         return (int) (Math.random() * 32);
     }
 
-    /**
-     * 生成一组完整的随机个体值
-     */
+    @Override
     public int[] generateRandomIVs() {
         return new int[]{
                 generateRandomIV(), // HP

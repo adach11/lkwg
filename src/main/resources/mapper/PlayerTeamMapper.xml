@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.PlayerTeamMapper">
+
+    <!-- 查找玩家的队伍（按位置排序） -->
+    <select id="findByPlayerIdOrderByPosition" resultType="com.seele.game.entity.PlayerTeam">
+        SELECT * FROM player_team
+        WHERE player_id = #{playerId}
+        ORDER BY position ASC
+    </select>
+
+    <!-- 查找玩家当前激活的队伍 -->
+    <select id="findByPlayerIdAndIsActiveTrue" resultType="com.seele.game.entity.PlayerTeam">
+        SELECT * FROM player_team
+        WHERE player_id = #{playerId}
+        AND is_active = TRUE
+    </select>
+
+    <!-- 查找玩家指定位置的队伍成员 -->
+    <select id="findByPlayerIdAndPosition" resultType="com.seele.game.entity.PlayerTeam">
+        SELECT * FROM player_team
+        WHERE player_id = #{playerId}
+        AND position = #{position}
+        LIMIT 1
+    </select>
+
+    <!-- 删除玩家的所有队伍 -->
+    <delete id="deleteByPlayerId">
+        DELETE FROM player_team
+        WHERE player_id = #{playerId}
+    </delete>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.PlayerTeam">
+        SELECT * FROM player_team WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM player_team
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.PlayerTeam"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO player_team (
+            player_id, position, player_pet_id, team_name,
+            is_active, created_at, updated_at
+        ) VALUES (
+            #{playerId}, #{position}, #{playerPetId}, #{teamName},
+            #{isActive}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.PlayerTeam">
+        UPDATE player_team SET
+            player_id = #{playerId},
+            position = #{position},
+            player_pet_id = #{playerPetId},
+            team_name = #{teamName},
+            is_active = #{isActive},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

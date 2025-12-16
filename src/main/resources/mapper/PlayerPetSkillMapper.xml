@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.PlayerPetSkillMapper">
+
+    <!-- 查找某个宠物已学会的所有技能 -->
+    <select id="findByPlayerPetId" resultType="com.seele.game.entity.PlayerPetSkill">
+        SELECT * FROM player_pet_skill
+        WHERE player_pet_id = #{playerPetId}
+    </select>
+
+    <!-- 查找某个宠物已装备的技能 -->
+    <select id="findByPlayerPetIdAndIsEquippedTrue" resultType="com.seele.game.entity.PlayerPetSkill">
+        SELECT * FROM player_pet_skill
+        WHERE player_pet_id = #{playerPetId}
+        AND is_equipped = TRUE
+    </select>
+
+    <!-- 查找某个宠物是否已学会某个技能 -->
+    <select id="findByPlayerPetIdAndSkillId" resultType="com.seele.game.entity.PlayerPetSkill">
+        SELECT * FROM player_pet_skill
+        WHERE player_pet_id = #{playerPetId}
+        AND skill_id = #{skillId}
+        LIMIT 1
+    </select>
+
+    <!-- 统计某个宠物已装备的技能数量 -->
+    <select id="countEquippedSkills" resultType="long">
+        SELECT COUNT(*) FROM player_pet_skill
+        WHERE player_pet_id = #{playerPetId}
+        AND is_equipped = TRUE
+    </select>
+
+    <!-- 查找宠物指定位置的技能 -->
+    <select id="findByPlayerPetIdAndPosition" resultType="com.seele.game.entity.PlayerPetSkill">
+        SELECT * FROM player_pet_skill
+        WHERE player_pet_id = #{playerPetId}
+        AND position = #{position}
+        LIMIT 1
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.PlayerPetSkill">
+        SELECT * FROM player_pet_skill WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM player_pet_skill
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.PlayerPetSkill"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO player_pet_skill (
+            player_pet_id, skill_id, current_pp, max_pp,
+            position, is_equipped, learned_at, updated_at
+        ) VALUES (
+            #{playerPetId}, #{skillId}, #{currentPp}, #{maxPp},
+            #{position}, #{isEquipped}, #{learnedAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.PlayerPetSkill">
+        UPDATE player_pet_skill SET
+            player_pet_id = #{playerPetId},
+            skill_id = #{skillId},
+            current_pp = #{currentPp},
+            max_pp = #{maxPp},
+            position = #{position},
+            is_equipped = #{isEquipped},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

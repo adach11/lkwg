@@ -1,4 +1,4 @@
-package com.seele.game.service;
+package com.seele.game.service.impl;
 
 import com.seele.game.entity.PetLevelSkill;
 import com.seele.game.entity.PlayerPet;
@@ -7,6 +7,7 @@ import com.seele.game.entity.Skill;
 import com.seele.game.mapper.PetLevelSkillMapper;
 import com.seele.game.mapper.PlayerPetSkillMapper;
 import com.seele.game.mapper.SkillMapper;
+import com.seele.game.service.ISkillLearnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,22 +16,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 技能学习服务
+ * 技能学习服务实现
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SkillLearnService {
+public class SkillLearnServiceImpl implements ISkillLearnService {
 
     private final PetLevelSkillMapper petLevelSkillMapper;
     private final PlayerPetSkillMapper playerPetSkillMapper;
     private final SkillMapper skillMapper;
 
-    /**
-     * 检查宠物升级时是否学会新技能
-     * @param playerPet 玩家宠物
-     * @param newLevel 新等级
-     */
+    @Override
     @Transactional
     public void checkAndLearnSkillsOnLevelUp(PlayerPet playerPet, int newLevel) {
         List<PetLevelSkill> learnableSkills = petLevelSkillMapper
@@ -48,13 +45,7 @@ public class SkillLearnService {
         }
     }
 
-    /**
-     * 学习技能
-     * @param playerPetId 玩家宠物ID
-     * @param skillId 技能ID
-     * @param replacePosition 如果技能栏已满，替换的位置(0-3)，null表示不装备
-     * @return 学习的技能
-     */
+    @Override
     @Transactional
     public PlayerPetSkill learnSkill(Long playerPetId, Long skillId, Integer replacePosition) {
         // 检查是否已学会
@@ -93,7 +84,8 @@ public class SkillLearnService {
             playerPetSkill.setPosition(null);
         }
 
-        return playerPetSkillMapper.insert(playerPetSkill);
+        playerPetSkillMapper.insert(playerPetSkill);
+        return playerPetSkill;
     }
 
     /**
@@ -115,12 +107,7 @@ public class SkillLearnService {
         newSkill.setPosition(position);
     }
 
-    /**
-     * 装备技能到指定位置
-     * @param playerPetId 玩家宠物ID
-     * @param skillId 技能ID
-     * @param position 位置 (0-3)
-     */
+    @Override
     @Transactional
     public void equipSkill(Long playerPetId, Long skillId, int position) {
         if (position < 0 || position > 3) {
@@ -151,9 +138,7 @@ public class SkillLearnService {
         log.info("宠物{}在位置{}装备了技能{}", playerPetId, position, skillId);
     }
 
-    /**
-     * 卸下技能
-     */
+    @Override
     @Transactional
     public void unequipSkill(Long playerPetId, Long skillId) {
         PlayerPetSkill skill = playerPetSkillMapper
@@ -169,23 +154,17 @@ public class SkillLearnService {
         log.info("宠物{}卸下了技能{}", playerPetId, skillId);
     }
 
-    /**
-     * 获取宠物已学会的所有技能
-     */
+    @Override
     public List<PlayerPetSkill> getLearnedSkills(Long playerPetId) {
         return playerPetSkillMapper.findByPlayerPetId(playerPetId);
     }
 
-    /**
-     * 获取宠物已装备的技能
-     */
+    @Override
     public List<PlayerPetSkill> getEquippedSkills(Long playerPetId) {
         return playerPetSkillMapper.findByPlayerPetIdAndIsEquippedTrue(playerPetId);
     }
 
-    /**
-     * 恢复所有技能的PP
-     */
+    @Override
     @Transactional
     public void restoreAllPp(Long playerPetId) {
         List<PlayerPetSkill> skills = playerPetSkillMapper.findByPlayerPetId(playerPetId);

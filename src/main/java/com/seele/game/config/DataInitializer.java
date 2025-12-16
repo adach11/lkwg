@@ -36,8 +36,8 @@ public class DataInitializer implements CommandLineRunner {
         log.info("开始初始化游戏数据...");
 
         // 检查是否已初始化
-        if (petTemplateMapper.selectCount(null) > 0) {
-            log.info("数据已存在，跳过初始化");
+        if (petTemplateMapper.selectCount() > 0) {
+            log.info("数据已存在,跳过初始化");
             return;
         }
 
@@ -120,7 +120,7 @@ public class DataInitializer implements CommandLineRunner {
         createSkill("睡觉", SkillType.STATUS, PetType.FIRE, 0, 100, 10, 0,
                    null, 0, "睡觉恢复HP");
 
-        log.info("初始化了{}个技能", skillMapper.selectCount(null));
+        log.info("初始化了{}个技能", skillMapper.selectCount());
     }
 
     /**
@@ -183,7 +183,7 @@ public class DataInitializer implements CommandLineRunner {
                  3.2, 3.2, 2.2, 5.0, 2.5, 4.5,
                  "传说中的电系宠物，速度和魔攻惊人");
 
-        log.info("初始化了{}只宠物", petTemplateMapper.selectCount(null));
+        log.info("初始化了{}只宠物", petTemplateMapper.selectCount());
     }
 
     /**
@@ -236,7 +236,7 @@ public class DataInitializer implements CommandLineRunner {
         createPetLevelSkill(elecMouse.getId(), thunder.getId(), 8);
         createPetLevelSkill(elecMouse.getId(), thunderbolt.getId(), 20);
 
-        log.info("初始化了{}条宠物技能配置", petLevelSkillMapper.selectCount(null));
+        log.info("初始化了{}条宠物技能配置", petLevelSkillMapper.selectCount());
     }
 
     private void createSkill(String name, SkillType skillType, PetType petType,

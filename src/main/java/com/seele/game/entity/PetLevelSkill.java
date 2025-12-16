@@ -1,6 +1,5 @@
 package com.seele.game.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,10 +13,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("pet_level_skill")
 public class PetLevelSkill {
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -38,6 +35,5 @@ public class PetLevelSkill {
     /**
      * 创建时间
      */
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }

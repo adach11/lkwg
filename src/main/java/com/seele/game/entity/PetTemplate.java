@@ -1,6 +1,5 @@
 package com.seele.game.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
 import com.seele.game.enums.PetRarity;
 import com.seele.game.enums.PetType;
 import lombok.AllArgsConstructor;
@@ -15,10 +14,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("pet_template")
 public class PetTemplate {
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -84,12 +81,10 @@ public class PetTemplate {
     /**
      * 创建时间
      */
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
     /**
      * 更新时间
      */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 }

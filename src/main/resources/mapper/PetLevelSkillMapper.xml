@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.PetLevelSkillMapper">
+
+    <!-- 查找某个宠物模板在指定等级可学习的技能 -->
+    <select id="findByPetTemplateIdAndLearnLevel" resultType="com.seele.game.entity.PetLevelSkill">
+        SELECT * FROM pet_level_skill
+        WHERE pet_template_id = #{petTemplateId}
+        AND learn_level = #{learnLevel}
+    </select>
+
+    <!-- 查找某个宠物模板的所有可学习技能 -->
+    <select id="findByPetTemplateId" resultType="com.seele.game.entity.PetLevelSkill">
+        SELECT * FROM pet_level_skill
+        WHERE pet_template_id = #{petTemplateId}
+    </select>
+
+    <!-- 查找某个宠物模板在指定等级及以下可学习的所有技能 -->
+    <select id="findByPetTemplateIdAndLearnLevelLessThanEqual" resultType="com.seele.game.entity.PetLevelSkill">
+        SELECT * FROM pet_level_skill
+        WHERE pet_template_id = #{petTemplateId}
+        AND learn_level &lt;= #{level}
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.PetLevelSkill">
+        SELECT * FROM pet_level_skill WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM pet_level_skill
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.PetLevelSkill"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pet_level_skill (
+            pet_template_id, skill_id, learn_level, created_at
+        ) VALUES (
+            #{petTemplateId}, #{skillId}, #{learnLevel}, #{createdAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.PetLevelSkill">
+        UPDATE pet_level_skill SET
+            pet_template_id = #{petTemplateId},
+            skill_id = #{skillId},
+            learn_level = #{learnLevel}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

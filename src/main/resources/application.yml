@@ -9,17 +9,12 @@ spring:
     password: qqhhnmmp228
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-# MyBatis-Plus配置
-mybatis-plus:
+# MyBatis配置
+mybatis:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL
     map-underscore-to-camel-case: true  # 下划线转驼峰
-  global-config:
-    db-config:
-      id-type: auto  # 主键自增
-      logic-delete-field: deleted  # 逻辑删除字段
-      logic-delete-value: 1  # 删除值
-      logic-not-delete-value: 0  # 未删除值
+  type-aliases-package: com.seele.game.entity  # 实体类包路径
   mapper-locations: classpath*:/mapper/**/*.xml  # Mapper XML位置
 
   # Redis配置（用于匹配队列和缓存）
@@ -32,7 +27,7 @@ mybatis-plus:
 
 # 服务器配置
 server:
-  port: 8080
+  port: 8888
 
 # 日志配置
 logging:

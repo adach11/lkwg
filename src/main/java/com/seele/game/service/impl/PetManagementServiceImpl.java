@@ -1,4 +1,4 @@
-package com.seele.game.service;
+package com.seele.game.service.impl;
 
 import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.PlayerPet;
@@ -7,6 +7,9 @@ import com.seele.game.enums.PetStatus;
 import com.seele.game.mapper.PetTemplateMapper;
 import com.seele.game.mapper.PlayerPetMapper;
 import com.seele.game.mapper.PlayerTeamMapper;
+import com.seele.game.service.IPetGrowthService;
+import com.seele.game.service.IPetManagementService;
+import com.seele.game.service.ISkillLearnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,34 +18,26 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 宠物管理服务
+ * 宠物管理服务实现
  * 负责宠物获取、队伍管理等
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PetManagementService {
+public class PetManagementServiceImpl implements IPetManagementService {
 
     private final PetTemplateMapper petTemplateMapper;
     private final PlayerPetMapper playerPetMapper;
     private final PlayerTeamMapper playerTeamMapper;
-    private final PetGrowthService petGrowthService;
-    private final SkillLearnService skillLearnService;
+    private final IPetGrowthService petGrowthService;
+    private final ISkillLearnService skillLearnService;
 
-    /**
-     * 获取所有初始宠物模板
-     */
+    @Override
     public List<PetTemplate> getStarterPets() {
         return petTemplateMapper.findByIsStarterTrue();
     }
 
-    /**
-     * 玩家选择初始宠物
-     * @param playerId 玩家ID
-     * @param petTemplateId 宠物模板ID
-     * @param nickname 昵称
-     * @return 创建的玩家宠物
-     */
+    @Override
     @Transactional
     public PlayerPet chooseStarterPet(Long playerId, Long petTemplateId, String nickname) {
         PetTemplate template = petTemplateMapper.selectById(petTemplateId);
@@ -74,14 +69,7 @@ public class PetManagementService {
         return pet;
     }
 
-    /**
-     * 创建宠物实例
-     * @param playerId 玩家ID
-     * @param petTemplateId 宠物模板ID
-     * @param nickname 昵称
-     * @param level 初始等级
-     * @return 创建的宠物
-     */
+    @Override
     @Transactional
     public PlayerPet createPet(Long playerId, Long petTemplateId, String nickname, int level) {
         PetTemplate template = petTemplateMapper.selectById(petTemplateId);
@@ -118,12 +106,7 @@ public class PetManagementService {
         return pet;
     }
 
-    /**
-     * 添加宠物到队伍
-     * @param playerId 玩家ID
-     * @param playerPetId 宠物ID
-     * @param position 位置 (1-6)
-     */
+    @Override
     @Transactional
     public void addToTeam(Long playerId, Long playerPetId, int position) {
         if (position < 1 || position > 6) {
@@ -165,9 +148,7 @@ public class PetManagementService {
         log.info("将宠物{}添加到玩家{}的队伍位置{}", playerPetId, playerId, position);
     }
 
-    /**
-     * 从队伍移除宠物
-     */
+    @Override
     @Transactional
     public void removeFromTeam(Long playerId, int position) {
         PlayerTeam teamSlot = playerTeamMapper.findByPlayerIdAndPosition(playerId, position);
@@ -180,30 +161,22 @@ public class PetManagementService {
         log.info("从玩家{}的队伍位置{}移除宠物", playerId, position);
     }
 
-    /**
-     * 获取玩家的队伍
-     */
+    @Override
     public List<PlayerTeam> getPlayerTeam(Long playerId) {
         return playerTeamMapper.findByPlayerIdOrderByPosition(playerId);
     }
 
-    /**
-     * 获取玩家的所有宠物
-     */
+    @Override
     public List<PlayerPet> getPlayerPets(Long playerId) {
         return playerPetMapper.findByPlayerId(playerId);
     }
 
-    /**
-     * 获取玩家所有未昏厥的宠物
-     */
+    @Override
     public List<PlayerPet> getActivePets(Long playerId) {
         return playerPetMapper.findActivePetsByPlayerId(playerId);
     }
 
-    /**
-     * 治疗宠物
-     */
+    @Override
     @Transactional
     public void healPet(Long playerPetId) {
         PlayerPet pet = playerPetMapper.selectById(playerPetId);
@@ -220,9 +193,7 @@ public class PetManagementService {
         log.info("完全治疗宠物{}", playerPetId);
     }
 
-    /**
-     * 治疗玩家的所有宠物
-     */
+    @Override
     @Transactional
     public void healAllPets(Long playerId) {
         List<PlayerPet> pets = playerPetMapper.findByPlayerId(playerId);

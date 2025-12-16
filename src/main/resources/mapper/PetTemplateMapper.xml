@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.PetTemplateMapper">
+
+    <!-- 查找所有初始宠物 -->
+    <select id="findByIsStarterTrue" resultType="com.seele.game.entity.PetTemplate">
+        SELECT * FROM pet_template
+        WHERE is_starter = TRUE
+    </select>
+
+    <!-- 根据属性类型查找宠物 -->
+    <select id="findByType" resultType="com.seele.game.entity.PetTemplate">
+        SELECT * FROM pet_template
+        WHERE type = #{type}
+    </select>
+
+    <!-- 根据稀有度查找宠物 -->
+    <select id="findByRarity" resultType="com.seele.game.entity.PetTemplate">
+        SELECT * FROM pet_template
+        WHERE rarity = #{rarity}
+    </select>
+
+    <!-- 根据名称查找宠物 -->
+    <select id="findByName" resultType="com.seele.game.entity.PetTemplate">
+        SELECT * FROM pet_template
+        WHERE name = #{name}
+        LIMIT 1
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.PetTemplate">
+        SELECT * FROM pet_template WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM pet_template
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.PetTemplate"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pet_template (
+            name, type, rarity, base_hp, base_attack, base_defense,
+            base_magic_attack, base_magic_defense, base_speed,
+            hp_growth, attack_growth, defense_growth,
+            magic_attack_growth, magic_defense_growth, speed_growth,
+            description, image_url, is_starter, created_at, updated_at
+        ) VALUES (
+            #{name}, #{type}, #{rarity}, #{baseHp}, #{baseAttack}, #{baseDefense},
+            #{baseMagicAttack}, #{baseMagicDefense}, #{baseSpeed},
+            #{hpGrowth}, #{attackGrowth}, #{defenseGrowth},
+            #{magicAttackGrowth}, #{magicDefenseGrowth}, #{speedGrowth},
+            #{description}, #{imageUrl}, #{isStarter}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.PetTemplate">
+        UPDATE pet_template SET
+            name = #{name},
+            type = #{type},
+            rarity = #{rarity},
+            base_hp = #{baseHp},
+            base_attack = #{baseAttack},
+            base_defense = #{baseDefense},
+            base_magic_attack = #{baseMagicAttack},
+            base_magic_defense = #{baseMagicDefense},
+            base_speed = #{baseSpeed},
+            hp_growth = #{hpGrowth},
+            attack_growth = #{attackGrowth},
+            defense_growth = #{defenseGrowth},
+            magic_attack_growth = #{magicAttackGrowth},
+            magic_defense_growth = #{magicDefenseGrowth},
+            speed_growth = #{speedGrowth},
+            description = #{description},
+            image_url = #{imageUrl},
+            is_starter = #{isStarter},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>
