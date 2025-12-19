@@ -1,9 +1,7 @@
 package com.seele.game.entity;
 
 import com.seele.game.enums.PetStatus;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +9,8 @@ import java.time.LocalDateTime;
  * 玩家宠物实例 - 每个玩家拥有的具体宠物
  */
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlayerPet {
@@ -26,6 +26,11 @@ public class PlayerPet {
      * 宠物模板ID
      */
     private Long petTemplateId;
+
+    /**
+     * 宠物模板（关联查询）
+     */
+    private PetTemplate template;
 
     /**
      * 昵称（玩家自定义）
@@ -84,12 +89,12 @@ public class PlayerPet {
     private Integer defense;
 
     /**
-     * 魔法攻击力
+     * 特攻
      */
     private Integer magicAttack;
 
     /**
-     * 魔法防御力
+     * 特防
      */
     private Integer magicDefense;
 
@@ -99,9 +104,14 @@ public class PlayerPet {
     private Integer speed;
 
     /**
-     * 当前状态
+     * 当前状态异常
      */
-    private PetStatus status;
+    private PetStatus statusCondition;
+
+    /**
+     * 已装备的技能列表（关联查询）
+     */
+    private java.util.List<PlayerPetSkill> skills;
 
     /**
      * 亲密度 (0-255)
@@ -144,6 +154,6 @@ public class PlayerPet {
      */
     public void fullRestore() {
         currentHp = maxHp;
-        status = PetStatus.NORMAL;
+        statusCondition = PetStatus.NORMAL;
     }
 }

@@ -65,8 +65,12 @@ public class PetController {
      */
     @GetMapping("/{petId}")
     public ApiResponse<PlayerPet> getPetDetail(@PathVariable Long petId) {
-        // TODO: 实现获取宠物详情
-        return ApiResponse.success(null);
+        try {
+            PlayerPet pet = petManagementService.getPetById(petId);
+            return ApiResponse.success(pet);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(404, e.getMessage());
+        }
     }
 
     /**
@@ -75,14 +79,8 @@ public class PetController {
     @PostMapping("/add-exp")
     public ApiResponse<PlayerPet> addExp(@Valid @RequestBody AddExpRequest request) {
         try {
-            PlayerPet pet = petManagementService.getPlayerPets(1L).stream()
-                    .filter(p -> p.getId().equals(request.getPlayerPetId()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (pet == null) {
-                throw new IllegalArgumentException("宠物不存在");
-            }
+            // 直接根据宠物ID查询
+            PlayerPet pet = petManagementService.getPetById(request.getPlayerPetId());
 
             boolean leveledUp = petGrowthService.addExp(pet, request.getExp());
             String message = leveledUp ? "获得经验并升级了！" : "获得经验值";

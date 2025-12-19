@@ -94,14 +94,20 @@ public class PetManagementServiceImpl implements IPetManagementService {
         pet.setIvMagicDefense(ivs[4]);
         pet.setIvSpeed(ivs[5]);
 
-        pet.setStatus(PetStatus.NORMAL);
-        pet.setFriendship(50);
-
-        // 保存后计算属性
-        playerPetMapper.insert(pet);
+        // 计算所有属性（使用正确的公式：基础值 + 成长率×等级 + IV）
         petGrowthService.recalculateStats(pet);
+
+        // 设置满HP
         pet.setCurrentHp(pet.getMaxHp());
-        playerPetMapper.updateById(pet);
+
+        // 设置其他初始属性
+        pet.setStatusCondition(PetStatus.NORMAL);
+        pet.setFriendship(50);
+        pet.setCreatedAt(java.time.LocalDateTime.now());
+        pet.setUpdatedAt(java.time.LocalDateTime.now());
+
+        // 一次性插入正确的数据
+        playerPetMapper.insert(pet);
 
         return pet;
     }
@@ -164,6 +170,15 @@ public class PetManagementServiceImpl implements IPetManagementService {
     @Override
     public List<PlayerTeam> getPlayerTeam(Long playerId) {
         return playerTeamMapper.findByPlayerIdOrderByPosition(playerId);
+    }
+
+    @Override
+    public PlayerPet getPetById(Long petId) {
+        PlayerPet pet = playerPetMapper.selectById(petId);
+        if (pet == null) {
+            throw new IllegalArgumentException("宠物不存在: " + petId);
+        }
+        return pet;
     }
 
     @Override

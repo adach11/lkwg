@@ -2,9 +2,7 @@ package com.seele.game.entity;
 
 import com.seele.game.enums.PetRarity;
 import com.seele.game.enums.PetType;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -12,6 +10,8 @@ import java.time.LocalDateTime;
  * 宠物模板 - 存储宠物的基础数据（所有玩家共享）
  */
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PetTemplate {

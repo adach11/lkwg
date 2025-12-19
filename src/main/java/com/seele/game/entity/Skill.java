@@ -3,9 +3,7 @@ package com.seele.game.entity;
 import com.seele.game.enums.PetStatus;
 import com.seele.game.enums.PetType;
 import com.seele.game.enums.SkillType;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +11,8 @@ import java.time.LocalDateTime;
  * 技能
  */
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Skill {

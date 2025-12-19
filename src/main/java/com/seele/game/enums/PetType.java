@@ -28,23 +28,23 @@ public enum PetType {
      */
     public double getEffectiveness(PetType defender) {
         // 火 > 草 > 水 > 火 (基础循环)
-        if (this == FIRE && defender == GRASS) return 1.5;
-        if (this == GRASS && defender == WATER) return 1.5;
-        if (this == WATER && defender == FIRE) return 1.5;
+        if (this == FIRE && defender == GRASS) return 2.0;
+        if (this == GRASS && defender == WATER) return 2.0;
+        if (this == WATER && defender == FIRE) return 2.0;
 
         // 反向被克
         if (this == FIRE && defender == WATER) return 0.5;
         if (this == WATER && defender == GRASS) return 0.5;
         if (this == GRASS && defender == FIRE) return 0.5;
 
-        // 电 > 水 (额外克制)
-        if (this == ELECTRIC && defender == WATER) return 1.5;
+        // 电 > 水
+        if (this == ELECTRIC && defender == WATER) return 2.0;
 
-        // 土 > 电 (免疫)
-        if (this == ELECTRIC && defender == GROUND) return 0.0;
+        // 土 > 电
+        if (this == GROUND && defender == ELECTRIC) return 2.0;
 
         // 龙 > 龙 (互克)
-        if (this == DRAGON && defender == DRAGON) return 1.5;
+        if (this == DRAGON && defender == DRAGON) return 2.0;
 
         // 默认普通伤害
         return 1.0;

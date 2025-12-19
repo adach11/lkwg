@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seele.game.mapper.SkillMapper">
+
+    <!-- 根据技能类型查找 -->
+    <select id="findBySkillType" resultType="com.seele.game.entity.Skill">
+        SELECT * FROM skill
+        WHERE skill_type = #{skillType}
+    </select>
+
+    <!-- 根据属性类型查找 -->
+    <select id="findByPetType" resultType="com.seele.game.entity.Skill">
+        SELECT * FROM skill
+        WHERE pet_type = #{petType}
+    </select>
+
+    <!-- 根据名称查找技能 -->
+    <select id="findByName" resultType="com.seele.game.entity.Skill">
+        SELECT * FROM skill
+        WHERE name = #{name}
+        LIMIT 1
+    </select>
+
+    <!-- 基础CRUD操作 -->
+    <select id="selectById" resultType="com.seele.game.entity.Skill">
+        SELECT * FROM skill WHERE id = #{id}
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(*) FROM skill
+    </select>
+
+    <insert id="insert" parameterType="com.seele.game.entity.Skill"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO skill (
+            name, skill_type, pet_type, power, accuracy, max_pp,
+            priority, status_effect, effect_chance, description,
+            created_at, updated_at
+        ) VALUES (
+            #{name}, #{skillType}, #{petType}, #{power}, #{accuracy}, #{maxPp},
+            #{priority}, #{statusEffect}, #{effectChance}, #{description},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.seele.game.entity.Skill">
+        UPDATE skill SET
+            name = #{name},
+            skill_type = #{skillType},
+            pet_type = #{petType},
+            power = #{power},
+            accuracy = #{accuracy},
+            max_pp = #{maxPp},
+            priority = #{priority},
+            status_effect = #{statusEffect},
+            effect_chance = #{effectChance},
+            description = #{description},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

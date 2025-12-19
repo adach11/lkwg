@@ -55,6 +55,11 @@ public interface IPetManagementService {
     List<PlayerTeam> getPlayerTeam(Long playerId);
 
     /**
+     * 根据ID获取单个宠物
+     */
+    PlayerPet getPetById(Long petId);
+
+    /**
      * 获取玩家的所有宠物
      */
     List<PlayerPet> getPlayerPets(Long playerId);

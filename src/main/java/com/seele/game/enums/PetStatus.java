@@ -5,11 +5,11 @@ package com.seele.game.enums;
  */
 public enum PetStatus {
     NORMAL("正常"),
-    BURN("烧伤"),      // 每回合损失最大HP的1/8，物攻减半
+    BURN("烧伤"),      // 每回合损失最大HP的1/8，获得2级物攻负面强化
     POISON("中毒"),    // 每回合损失最大HP的1/8
-    PARALYSIS("麻痹"), // 速度减半，25%几率无法行动
-    FREEZE("冰冻"),    // 无法行动，每回合20%几率解除
-    SLEEP("睡眠");     // 无法行动，1-3回合后解除
+    PARALYSIS("麻痹"), // 获得一级速度负面强化，25%几率无法行动
+    FREEZE("冰冻"),    // 无法行动，每回合10%几率解除或受到火属性伤害立刻解除
+    SLEEP("睡眠");     // 无法行动，每回合30%概率解除或受到攻击后解除
 
     private final String displayName;
 

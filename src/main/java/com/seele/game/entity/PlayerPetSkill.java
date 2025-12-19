@@ -1,8 +1,6 @@
 package com.seele.game.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +9,8 @@ import java.time.LocalDateTime;
  * 存储玩家宠物已经学会的所有技能以及当前装备的技能
  */
 @Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlayerPetSkill {
@@ -26,6 +26,11 @@ public class PlayerPetSkill {
      * 技能ID
      */
     private Long skillId;
+
+    /**
+     * 技能对象（关联查询）
+     */
+    private Skill skill;
 
     /**
      * 当前PP（剩余使用次数）

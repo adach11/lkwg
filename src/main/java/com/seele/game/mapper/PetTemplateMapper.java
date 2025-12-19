@@ -52,4 +52,9 @@ public interface PetTemplateMapper {
      * 根据名称查找宠物
      */
     PetTemplate findByName(String name);
+
+    /**
+     * 查找所有宠物模板
+     */
+    List<PetTemplate> findAll();
 }

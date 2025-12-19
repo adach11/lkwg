@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: pet-battle-game
+
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://47.109.144.244:3306/lkwg-dev?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: qqhhnmmp228
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# MyBatis配置
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL
+    map-underscore-to-camel-case: true  # 下划线转驼峰
+  type-aliases-package: com.seele.game.entity  # 实体类包路径
+  mapper-locations: classpath*:/mapper/**/*.xml  # Mapper XML位置
+
+  # Redis配置（用于匹配队列和缓存）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 5000ms
+
+# 服务器配置
+server:
+  port: 8888
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.seele.petbattle: DEBUG
+    com.seele.petbattle.mapper: DEBUG  # Mapper日志
