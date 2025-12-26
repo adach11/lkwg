@@ -1,5 +1,6 @@
 package com.seele.game.service;
 
+import com.seele.game.battle.BattleAction;
 import com.seele.game.battle.BattlePetState;
 import com.seele.game.entity.Skill;
 
@@ -13,9 +14,10 @@ public interface IBattleCalculationService {
      * @param attacker 攻击方
      * @param defender 防守方
      * @param skill 使用的技能
+     * @param isCritical 是否暴击
      * @return 伤害值
      */
-    int calculateDamage(BattlePetState attacker, BattlePetState defender, Skill skill);
+    int calculateDamage(BattlePetState attacker, BattlePetState defender, Skill skill, boolean isCritical);
 
     /**
      * 检查是否命中
@@ -59,4 +61,14 @@ public interface IBattleCalculationService {
      * @return 行动结果消息（null表示可以行动）
      */
     String checkCanAct(BattlePetState pet);
+
+    /**
+     * 判断谁先行动
+     * @param pet1 宠物1状态
+     * @param action1 宠物1的动作
+     * @param pet2 宠物2状态
+     * @param action2 宠物2的动作
+     * @return true表示宠物1先行动，false表示宠物2先行动
+     */
+    boolean determineFirstMove(BattlePetState pet1, BattleAction action1, BattlePetState pet2, BattleAction action2);
 }

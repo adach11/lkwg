@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,6 +73,7 @@ public class BattleServiceImpl implements IBattleService {
         // 创建战斗状态
         BattleState battleState = new BattleState();
         battleState.setBattleId(UUID.randomUUID().toString());
+        battleState.setBattleType(com.seele.game.enums.BattleType.PVE);
         battleState.setPlayerId(playerId);
         battleState.setStatus(BattleStatus.ONGOING);
 
@@ -251,12 +253,12 @@ public class BattleServiceImpl implements IBattleService {
             return result;
         }
 
-        // 暴击判定
+        // 暴击判定（只判定一次）
         boolean critical = calculationService.checkCritical();
         result.setCritical(critical);
 
-        // 计算伤害
-        int damage = calculationService.calculateDamage(attacker, defender, skill);
+        // 计算伤害（传入暴击判定结果，确保一致性）
+        int damage = calculationService.calculateDamage(attacker, defender, skill, critical);
         double effectiveness = calculationService.getTypeEffectiveness(attacker, defender, skill);
         result.setDamage(damage);
         result.setTypeEffectiveness(effectiveness);
@@ -340,5 +342,439 @@ public class BattleServiceImpl implements IBattleService {
                 .map(PlayerPetSkill::getSkill)
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    public BattleState createPvpBattle(Long player1Id, Long player1PetId, Long player2Id, Long player2PetId) {
+        log.info("创建PVP对战: player1Id={}, player1PetId={}, player2Id={}, player2PetId={}",
+                player1Id, player1PetId, player2Id, player2PetId);
+
+        // 获取玩家1宠物（带技能）
+        PlayerPet player1Pet = playerPetMapper.selectById(player1PetId);
+        if (player1Pet == null) {
+            throw new RuntimeException("玩家1宠物不存在: " + player1PetId);
+        }
+        if (!player1Pet.getPlayerId().equals(player1Id)) {
+            throw new RuntimeException("宠物不属于玩家1");
+        }
+        if (player1Pet.isFainted()) {
+            throw new RuntimeException("玩家1宠物已濒死，请先治疗");
+        }
+
+        // 获取玩家1已装备的技能
+        List<PlayerPetSkill> player1Skills = skillLearnService.getEquippedSkills(player1PetId);
+        if (player1Skills.isEmpty()) {
+            throw new RuntimeException("玩家1宠物没有装备任何技能");
+        }
+        player1Pet.setSkills(player1Skills);
+
+        // 获取玩家2宠物（带技能）
+        PlayerPet player2Pet = playerPetMapper.selectById(player2PetId);
+        if (player2Pet == null) {
+            throw new RuntimeException("玩家2宠物不存在: " + player2PetId);
+        }
+        if (!player2Pet.getPlayerId().equals(player2Id)) {
+            throw new RuntimeException("宠物不属于玩家2");
+        }
+        if (player2Pet.isFainted()) {
+            throw new RuntimeException("玩家2宠物已濒死，请先治疗");
+        }
+
+        // 获取玩家2已装备的技能
+        List<PlayerPetSkill> player2Skills = skillLearnService.getEquippedSkills(player2PetId);
+        if (player2Skills.isEmpty()) {
+            throw new RuntimeException("玩家2宠物没有装备任何技能");
+        }
+        player2Pet.setSkills(player2Skills);
+
+        // 创建战斗状态
+        BattleState battleState = new BattleState();
+        battleState.setBattleId(UUID.randomUUID().toString());
+        battleState.setBattleType(com.seele.game.enums.BattleType.PVP);
+        battleState.setPlayer1Id(player1Id);
+        battleState.setPlayer2Id(player2Id);
+        battleState.setStatus(BattleStatus.ONGOING);
+
+        // 初始化双方宠物状态
+        battleState.setPlayer1Pet(BattlePetState.fromPlayerPet(player1Pet, player1Skills));
+        battleState.setPlayer2Pet(BattlePetState.fromPlayerPet(player2Pet, player2Skills));
+
+        // 保存到内存
+        battles.put(battleState.getBattleId(), battleState);
+
+        log.info("PVP战斗创建成功: battleId={}", battleState.getBattleId());
+        return battleState;
+    }
+
+    @Override
+    public boolean submitSkillChoice(String battleId, Long playerId, Long skillId) {
+        BattleState battle = getBattleState(battleId);
+
+        if (!battle.isPvp()) {
+            throw new RuntimeException("这不是PVP战斗");
+        }
+
+        if (battle.isEnded()) {
+            throw new RuntimeException("战斗已结束");
+        }
+
+        // 验证玩家权限
+        boolean isPlayer1 = battle.getPlayer1Id().equals(playerId);
+        boolean isPlayer2 = battle.getPlayer2Id().equals(playerId);
+
+        if (!isPlayer1 && !isPlayer2) {
+            throw new RuntimeException("你不在此战斗中");
+        }
+
+        // 验证技能
+        BattlePetState playerPet = isPlayer1 ? battle.getPlayer1Pet() : battle.getPlayer2Pet();
+        Skill skill = getSkillById(playerPet, skillId);
+        if (skill == null) {
+            throw new RuntimeException("技能不存在: " + skillId);
+        }
+
+        // 提交技能选择
+        if (isPlayer1) {
+            battle.setPlayer1SkillChoice(skillId);
+            battle.setPlayer1Ready(true);
+            log.info("玩家1已选择技能: battleId={}, skillId={}", battleId, skillId);
+        } else {
+            battle.setPlayer2SkillChoice(skillId);
+            battle.setPlayer2Ready(true);
+            log.info("玩家2已选择技能: battleId={}, skillId={}", battleId, skillId);
+        }
+
+        // 返回是否双方都已准备好
+        return battle.bothPlayersReady();
+    }
+
+    @Override
+    public BattleRoundResult executePvpRound(String battleId) {
+        BattleState battle = getBattleState(battleId);
+
+        if (!battle.isPvp()) {
+            throw new RuntimeException("这不是PVP战斗");
+        }
+
+        if (battle.isEnded()) {
+            throw new RuntimeException("战斗已结束");
+        }
+
+        if (!battle.bothPlayersReady()) {
+            throw new RuntimeException("双方玩家尚未都选择技能");
+        }
+
+        battle.setCurrentTurn(battle.getCurrentTurn() + 1);
+        log.info("执行PVP第{}回合: battleId={}", battle.getCurrentTurn(), battleId);
+
+        BattleRoundResult roundResult = new BattleRoundResult();
+        roundResult.setTurn(battle.getCurrentTurn());
+
+        // 获取双方选择的技能
+        Skill player1Skill = getSkillById(battle.getPlayer1Pet(), battle.getPlayer1SkillChoice());
+        Skill player2Skill = getSkillById(battle.getPlayer2Pet(), battle.getPlayer2SkillChoice());
+
+        if (player1Skill == null || player2Skill == null) {
+            throw new RuntimeException("技能选择无效");
+        }
+
+        // 判断先后手
+        int player1Speed = calculationService.getEffectiveSpeed(battle.getPlayer1Pet());
+        int player2Speed = calculationService.getEffectiveSpeed(battle.getPlayer2Pet());
+
+        boolean player1First = player1Speed >= player2Speed;
+
+        // 执行先手
+        BattleActionResult firstAction;
+        BattleActionResult secondAction = null;
+
+        if (player1First) {
+            firstAction = executeAction(battle.getPlayer1Pet(), battle.getPlayer2Pet(), player1Skill);
+            roundResult.setFirstAction(firstAction);
+
+            if (!battle.getPlayer2Pet().isFainted()) {
+                secondAction = executeAction(battle.getPlayer2Pet(), battle.getPlayer1Pet(), player2Skill);
+                roundResult.setSecondAction(secondAction);
+            }
+        } else {
+            firstAction = executeAction(battle.getPlayer2Pet(), battle.getPlayer1Pet(), player2Skill);
+            roundResult.setFirstAction(firstAction);
+
+            if (!battle.getPlayer1Pet().isFainted()) {
+                secondAction = executeAction(battle.getPlayer1Pet(), battle.getPlayer2Pet(), player1Skill);
+                roundResult.setSecondAction(secondAction);
+            }
+        }
+
+        // 回合结束处理（状态异常伤害）
+        processEndOfTurn(battle, roundResult);
+
+        // 检查战斗是否结束
+        if (battle.getPlayer1Pet().isFainted() || battle.getPlayer2Pet().isFainted()) {
+            String winner;
+            if (battle.getPlayer1Pet().isFainted() && battle.getPlayer2Pet().isFainted()) {
+                winner = "平局";
+            } else if (battle.getPlayer1Pet().isFainted()) {
+                winner = "玩家2";
+            } else {
+                winner = "玩家1";
+            }
+
+            battle.endBattle(winner);
+            roundResult.setBattleEnded(true);
+            roundResult.setWinner(winner);
+
+            // PVP战斗结束，双方都获得一定经验
+            settlePvpBattleReward(battle);
+        } else {
+            // 重置技能选择，准备下一回合
+            battle.resetSkillChoices();
+        }
+
+        // 保存回合结果
+        battle.addRoundResult(roundResult);
+
+        return roundResult;
+    }
+
+    /**
+     * 结算PVP战斗奖励
+     */
+    @Transactional
+    public void settlePvpBattleReward(BattleState battle) {
+        try {
+            PlayerPet player1Pet = battle.getPlayer1Pet().getOriginalPet();
+            PlayerPet player2Pet = battle.getPlayer2Pet().getOriginalPet();
+
+            // 计算经验值
+            int player1Exp = player2Pet.getLevel() * 30; // 基于对手等级
+            int player2Exp = player1Pet.getLevel() * 30;
+
+            // 胜者额外获得50%经验
+            if ("玩家1".equals(battle.getWinner())) {
+                player1Exp = (int) (player1Exp * 1.5);
+            } else if ("玩家2".equals(battle.getWinner())) {
+                player2Exp = (int) (player2Exp * 1.5);
+            }
+
+            log.info("PVP战斗结束，玩家1宠物{}获得{}经验，玩家2宠物{}获得{}经验",
+                    player1Pet.getId(), player1Exp, player2Pet.getId(), player2Exp);
+
+            // 添加经验
+            if (player1Exp > 0) {
+                petGrowthService.addExp(playerPetMapper.selectById(player1Pet.getId()), player1Exp);
+            }
+            if (player2Exp > 0) {
+                petGrowthService.addExp(playerPetMapper.selectById(player2Pet.getId()), player2Exp);
+            }
+
+        } catch (Exception e) {
+            log.error("结算PVP战斗奖励失败", e);
+        }
+    }
+
+    @Override
+    public BattleState createTeamPveBattle(Long playerId, Long[] petIds, AIDifficulty difficulty) {
+        log.info("创建队伍PVE战斗: playerId={}, petIds={}, difficulty={}", playerId, petIds, difficulty);
+
+        if (petIds == null || petIds.length == 0 || petIds.length > 6) {
+            throw new RuntimeException("宠物队伍数量必须在1-6之间");
+        }
+
+        // 加载玩家的宠物队伍
+        List<BattlePetState> playerTeam = new ArrayList<>();
+        for (Long petId : petIds) {
+            PlayerPet pet = playerPetMapper.selectById(petId);
+            if (pet == null) {
+                throw new RuntimeException("宠物不存在: " + petId);
+            }
+            if (!pet.getPlayerId().equals(playerId)) {
+                throw new RuntimeException("宠物不属于该玩家: " + petId);
+            }
+            if (pet.isFainted()) {
+                throw new RuntimeException("宠物已濒死，请先治疗: " + pet.getNickname());
+            }
+
+            List<PlayerPetSkill> skills = skillLearnService.getEquippedSkills(petId);
+            if (skills.isEmpty()) {
+                throw new RuntimeException("宠物没有装备任何技能: " + pet.getNickname());
+            }
+            pet.setSkills(skills);
+            playerTeam.add(BattlePetState.fromPlayerPet(pet, skills));
+        }
+
+        // 生成AI队伍（基于玩家第一只宠物的等级）
+        List<BattlePetState> aiTeam = new ArrayList<>();
+        PlayerPet firstPet = playerTeam.get(0).getOriginalPet();
+        for (int i = 0; i < petIds.length; i++) {
+            PlayerPet aiPet = aiService.generateAIPet(firstPet, difficulty);
+            aiTeam.add(BattlePetState.fromPlayerPet(aiPet, aiPet.getSkills()));
+        }
+
+        // 创建战斗状态
+        BattleState battleState = new BattleState();
+        battleState.setBattleId(UUID.randomUUID().toString());
+        battleState.setBattleType(com.seele.game.enums.BattleType.PVE);
+        battleState.setPlayer1Id(playerId);
+        battleState.setStatus(BattleStatus.ONGOING);
+
+        // 设置队伍模式
+        battleState.setPlayer1Team(playerTeam);
+        battleState.setPlayer2Team(aiTeam);
+        battleState.setPlayer1ActiveIndex(0);
+        battleState.setPlayer2ActiveIndex(0);
+
+        // 为了兼容性，也设置单宠物字段
+        battleState.setPlayer1Pet(playerTeam.get(0));
+        battleState.setPlayer2Pet(aiTeam.get(0));
+
+        // 创建AI训练师
+        AITrainer trainer = new AITrainer();
+        trainer.setName(AITrainer.generateTrainerName(difficulty));
+        trainer.setDifficulty(difficulty);
+        trainer.setPet(aiTeam.get(0).getOriginalPet());
+        battleState.setAiTrainer(trainer);
+
+        battles.put(battleState.getBattleId(), battleState);
+
+        log.info("队伍PVE战斗创建成功: battleId={}, 队伍大小={}", battleState.getBattleId(), petIds.length);
+        return battleState;
+    }
+
+    @Override
+    public BattleState createTeamPvpBattle(Long player1Id, Long[] player1PetIds, Long player2Id, Long[] player2PetIds) {
+        log.info("创建队伍PVP战斗: player1Id={}, player2Id={}", player1Id, player2Id);
+
+        if (player1PetIds == null || player1PetIds.length == 0 || player1PetIds.length > 6) {
+            throw new RuntimeException("玩家1宠物队伍数量必须在1-6之间");
+        }
+        if (player2PetIds == null || player2PetIds.length == 0 || player2PetIds.length > 6) {
+            throw new RuntimeException("玩家2宠物队伍数量必须在1-6之间");
+        }
+
+        // 加载玩家1的宠物队伍
+        List<BattlePetState> player1Team = new ArrayList<>();
+        for (Long petId : player1PetIds) {
+            PlayerPet pet = playerPetMapper.selectById(petId);
+            if (pet == null) {
+                throw new RuntimeException("玩家1宠物不存在: " + petId);
+            }
+            if (!pet.getPlayerId().equals(player1Id)) {
+                throw new RuntimeException("宠物不属于玩家1: " + petId);
+            }
+            if (pet.isFainted()) {
+                throw new RuntimeException("玩家1宠物已濒死: " + pet.getNickname());
+            }
+
+            List<PlayerPetSkill> skills = skillLearnService.getEquippedSkills(petId);
+            if (skills.isEmpty()) {
+                throw new RuntimeException("玩家1宠物没有装备技能: " + pet.getNickname());
+            }
+            pet.setSkills(skills);
+            player1Team.add(BattlePetState.fromPlayerPet(pet, skills));
+        }
+
+        // 加载玩家2的宠物队伍
+        List<BattlePetState> player2Team = new ArrayList<>();
+        for (Long petId : player2PetIds) {
+            PlayerPet pet = playerPetMapper.selectById(petId);
+            if (pet == null) {
+                throw new RuntimeException("玩家2宠物不存在: " + petId);
+            }
+            if (!pet.getPlayerId().equals(player2Id)) {
+                throw new RuntimeException("宠物不属于玩家2: " + petId);
+            }
+            if (pet.isFainted()) {
+                throw new RuntimeException("玩家2宠物已濒死: " + pet.getNickname());
+            }
+
+            List<PlayerPetSkill> skills = skillLearnService.getEquippedSkills(petId);
+            if (skills.isEmpty()) {
+                throw new RuntimeException("玩家2宠物没有装备技能: " + pet.getNickname());
+            }
+            pet.setSkills(skills);
+            player2Team.add(BattlePetState.fromPlayerPet(pet, skills));
+        }
+
+        // 创建战斗状态
+        BattleState battleState = new BattleState();
+        battleState.setBattleId(UUID.randomUUID().toString());
+        battleState.setBattleType(com.seele.game.enums.BattleType.PVP);
+        battleState.setPlayer1Id(player1Id);
+        battleState.setPlayer2Id(player2Id);
+        battleState.setStatus(BattleStatus.ONGOING);
+
+        // 设置队伍模式
+        battleState.setPlayer1Team(player1Team);
+        battleState.setPlayer2Team(player2Team);
+        battleState.setPlayer1ActiveIndex(0);
+        battleState.setPlayer2ActiveIndex(0);
+
+        // 为了兼容性，也设置单宠物字段
+        battleState.setPlayer1Pet(player1Team.get(0));
+        battleState.setPlayer2Pet(player2Team.get(0));
+
+        battles.put(battleState.getBattleId(), battleState);
+
+        log.info("队伍PVP战斗创建成功: battleId={}", battleState.getBattleId());
+        return battleState;
+    }
+
+    @Override
+    public boolean submitSwitchPet(String battleId, Long playerId, int switchToIndex) {
+        BattleState battle = getBattleState(battleId);
+
+        if (battle.isEnded()) {
+            throw new RuntimeException("战斗已结束");
+        }
+
+        if (!battle.isTeamMode()) {
+            throw new RuntimeException("此战斗不是队伍模式，无法切换宠物");
+        }
+
+        if (switchToIndex < 0 || switchToIndex >= 6) {
+            throw new RuntimeException("宠物索引无效: " + switchToIndex);
+        }
+
+        // 验证玩家权限
+        boolean isPlayer1 = battle.getPlayer1Id().equals(playerId);
+        boolean isPlayer2 = battle.isPvp() && battle.getPlayer2Id().equals(playerId);
+
+        if (!isPlayer1 && !isPlayer2) {
+            throw new RuntimeException("你不在此战斗中");
+        }
+
+        // 验证切换的宠物是否有效
+        List<BattlePetState> team = isPlayer1 ? battle.getPlayer1Team() : battle.getPlayer2Team();
+        int currentIndex = isPlayer1 ? battle.getPlayer1ActiveIndex() : battle.getPlayer2ActiveIndex();
+
+        if (switchToIndex >= team.size()) {
+            throw new RuntimeException("宠物索引超出队伍范围");
+        }
+
+        if (switchToIndex == currentIndex) {
+            throw new RuntimeException("该宠物已经在场上");
+        }
+
+        BattlePetState targetPet = team.get(switchToIndex);
+        if (targetPet.isFainted()) {
+            throw new RuntimeException("不能切换到已濒死的宠物");
+        }
+
+        // 提交切换选择
+        if (isPlayer1) {
+            battle.setPlayer1SwitchTo(switchToIndex);
+            battle.setPlayer1Ready(true);
+            battle.setPlayer1SkillChoice(null);  // 清空技能选择
+            log.info("玩家1选择切换到宠物{}: battleId={}", switchToIndex, battleId);
+        } else {
+            battle.setPlayer2SwitchTo(switchToIndex);
+            battle.setPlayer2Ready(true);
+            battle.setPlayer2SkillChoice(null);  // 清空技能选择
+            log.info("玩家2选择切换到宠物{}: battleId={}", switchToIndex, battleId);
+        }
+
+        // PVE模式下直接返回true，PVP模式下检查双方是否都准备好
+        return !battle.isPvp() || battle.bothPlayersReady();
     }
 }

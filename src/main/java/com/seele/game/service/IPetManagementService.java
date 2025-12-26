@@ -18,6 +18,11 @@ public interface IPetManagementService {
     List<PetTemplate> getStarterPets();
 
     /**
+     * 获取所有宠物模板
+     */
+    List<PetTemplate> getAllPetTemplates();
+
+    /**
      * 玩家选择初始宠物
      * @param playerId 玩家ID
      * @param petTemplateId 宠物模板ID

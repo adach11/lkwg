@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宠物对战测试 - PVP & 队伍战斗</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .player-panel {
+            flex: 1;
+            border: 2px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .player-panel h2 {
+            margin-top: 0;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: inline-block;
+            width: 100px;
+        }
+        .input-group input {
+            width: 150px;
+            padding: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px;
+        }
+        .log-info {
+            color: #0066cc;
+        }
+        .log-success {
+            color: #00cc00;
+        }
+        .log-error {
+            color: #cc0000;
+        }
+        .status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status-connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+        .team-section {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+        }
+        .team-section h3 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        .pet-slot {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin: 2px;
+            border: 2px solid #4CAF50;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 36px;
+            background-color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .pet-slot.empty {
+            border-color: #ddd;
+            background-color: #f5f5f5;
+            color: #999;
+        }
+        .pet-slot.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .team-input {
+            width: 300px;
+            padding: 5px;
+            margin: 5px 0;
+        }
+        .switch-buttons {
+            margin-top: 10px;
+        }
+        .switch-btn {
+            background-color: #FF9800;
+            padding: 5px 10px;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .switch-btn:hover {
+            background-color: #F57C00;
+        }
+        .api-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3e0;
+            border-radius: 4px;
+        }
+        .api-section h3 {
+            margin: 0 0 10px 0;
+            color: #e65100;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>宠物对战测试页面 - PVP & 队伍战斗</h1>
+
+    <!-- 宠物管理区域 -->
+    <div class="api-section">
+        <h3>🐾 宠物管理</h3>
+        <div class="input-group">
+            <label>玩家ID:</label>
+            <input type="number" id="petMgmtPlayerId" value="1">
+            <button onclick="getPlayerPets()">查看我的宠物</button>
+            <button onclick="getStarterPets()">查看初始宠物</button>
+            <button onclick="healAllPets()">治疗所有宠物</button>
+        </div>
+        <div class="input-group">
+            <label>选择初始宠物:</label>
+            <input type="number" id="starterTemplateId" placeholder="模板ID" style="width: 80px;">
+            <input type="text" id="starterNickname" placeholder="昵称" style="width: 120px;">
+            <button onclick="chooseStarter()">选择</button>
+        </div>
+        <div class="input-group">
+            <label>捕获宠物:</label>
+            <button onclick="getAllTemplates()">查看所有宠物</button>
+            <input type="number" id="catchTemplateId" placeholder="模板ID" style="width: 80px;">
+            <input type="text" id="catchNickname" placeholder="昵称" style="width: 120px;">
+            <input type="number" id="catchLevel" placeholder="等级(默认5)" style="width: 100px;">
+            <button onclick="catchPet()">捕获</button>
+        </div>
+        <div class="input-group">
+            <label>宠物操作:</label>
+            <input type="number" id="petOperationId" placeholder="宠物ID" style="width: 80px;">
+            <button onclick="getPetDetail()">查看详情</button>
+            <button onclick="healPet()">治疗</button>
+            <button onclick="getPetSkills()">查看技能</button>
+        </div>
+        <div id="petMgmtLog" class="log" style="height: 200px; margin-top: 10px;"></div>
+    </div>
+
+    <!-- 技能管理区域 -->
+    <div class="api-section">
+        <h3>⚡ 技能管理</h3>
+        <div class="input-group">
+            <label>宠物ID:</label>
+            <input type="number" id="skillMgmtPetId" value="1">
+            <button onclick="getAvailableSkills()">查看可学习技能</button>
+            <button onclick="getLearnedSkills()">查看已学技能</button>
+            <button onclick="getEquippedSkills()">查看已装备技能</button>
+        </div>
+        <div class="input-group">
+            <label>学习技能:</label>
+            <input type="number" id="learnSkillId" placeholder="技能ID" style="width: 80px;">
+            <input type="number" id="replacePosition" placeholder="替换位置(0-3,可选)" style="width: 140px;">
+            <button onclick="learnSkill()">学习</button>
+        </div>
+        <div class="input-group">
+            <label>装备/卸下:</label>
+            <input type="number" id="equipSkillId" placeholder="技能ID" style="width: 80px;">
+            <input type="number" id="equipPosition" placeholder="位置(0-3)" style="width: 100px;">
+            <button onclick="equipSkill()">装备</button>
+            <button onclick="unequipSkill()">卸下</button>
+        </div>
+        <div class="input-group">
+            <label>查看所有技能:</label>
+            <button onclick="getAllSkills()">查看技能库</button>
+        </div>
+        <div id="skillMgmtLog" class="log" style="height: 200px; margin-top: 10px;"></div>
+    </div>
+
+    <!-- 技能创建区域 -->
+    <div class="api-section" style="background-color: #e8eaf6;">
+        <h3>🔨 技能创建（管理员功能）</h3>
+        <div class="input-group">
+            <label>技能名称:</label>
+            <input type="text" id="skillName" placeholder="技能名称" style="width: 150px;">
+            <label style="width: 80px;">威力(0-150):</label>
+            <input type="number" id="skillPower" placeholder="0" style="width: 60px;">
+            <label style="width: 100px;">命中率(30-100):</label>
+            <input type="number" id="skillAccuracy" placeholder="100" style="width: 60px;">
+        </div>
+        <div class="input-group">
+            <label>技能类型:</label>
+            <select id="skillType" style="width: 100px;">
+                <option value="PHYSICAL">物理</option>
+                <option value="SPECIAL">特殊</option>
+                <option value="STATUS">变化</option>
+            </select>
+            <label style="width: 80px;">属性:</label>
+            <select id="skillPetType" style="width: 100px;">
+                <option value="NORMAL">普通</option>
+                <option value="FIRE">火</option>
+                <option value="WATER">水</option>
+                <option value="GRASS">草</option>
+                <option value="ELECTRIC">电</option>
+                <option value="ICE">冰</option>
+                <option value="FIGHTING">格斗</option>
+                <option value="POISON">毒</option>
+                <option value="GROUND">地面</option>
+                <option value="FLYING">飞行</option>
+                <option value="PSYCHIC">超能力</option>
+                <option value="BUG">虫</option>
+                <option value="ROCK">岩石</option>
+                <option value="GHOST">幽灵</option>
+                <option value="DRAGON">龙</option>
+                <option value="DARK">恶</option>
+                <option value="STEEL">钢</option>
+                <option value="FAIRY">妖精</option>
+            </select>
+            <label style="width: 80px;">PP:</label>
+            <input type="number" id="skillMaxPp" placeholder="10" style="width: 60px;">
+        </div>
+        <div class="input-group">
+            <label>先制度(-7~7):</label>
+            <input type="number" id="skillPriority" placeholder="0" style="width: 60px;">
+            <label style="width: 80px;">状态效果:</label>
+            <select id="skillStatusEffect" style="width: 100px;">
+                <option value="">无</option>
+                <option value="BURN">烧伤</option>
+                <option value="POISON">中毒</option>
+                <option value="PARALYSIS">麻痹</option>
+                <option value="SLEEP">睡眠</option>
+                <option value="FREEZE">冰冻</option>
+            </select>
+            <label style="width: 100px;">效果概率(0-100):</label>
+            <input type="number" id="skillEffectChance" placeholder="0" style="width: 60px;">
+        </div>
+        <div class="input-group">
+            <label>技能描述:</label>
+            <input type="text" id="skillDescription" placeholder="技能描述" style="width: 400px;">
+        </div>
+        <div class="input-group">
+            <button onclick="createSkill()">创建技能</button>
+        </div>
+        <div class="input-group" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ccc;">
+            <label>设置技能学习:</label>
+            <input type="number" id="levelSkillTemplateId" placeholder="宠物模板ID" style="width: 100px;">
+            <input type="number" id="levelSkillId" placeholder="技能ID" style="width: 80px;">
+            <input type="number" id="levelSkillLevel" placeholder="学习等级" style="width: 80px;">
+            <button onclick="setPetLevelSkill()">设置</button>
+            <button onclick="getTemplateLevelSkills()">查看配置</button>
+        </div>
+        <div id="skillCreateLog" class="log" style="height: 150px; margin-top: 10px;"></div>
+    </div>
+
+    <!-- 队伍管理区域 -->
+    <div class="api-section">
+        <h3>📦 队伍管理</h3>
+        <div class="input-group">
+            <label>玩家ID:</label>
+            <input type="number" id="teamPlayerId" value="1">
+            <button onclick="getTeam()">查看队伍</button>
+            <button onclick="clearTeam()" class="danger">清空队伍</button>
+        </div>
+        <div class="input-group">
+            <label>批量设置:</label>
+            <input type="text" id="teamPetIds" class="team-input" placeholder="宠物ID，逗号分隔，如: 1,2,3">
+            <button onclick="setTeam()">设置队伍</button>
+        </div>
+        <div class="input-group">
+            <label>当前队伍:</label>
+            <div id="teamDisplay" style="margin-top: 5px;">
+                <span class="pet-slot empty">1</span>
+                <span class="pet-slot empty">2</span>
+                <span class="pet-slot empty">3</span>
+                <span class="pet-slot empty">4</span>
+                <span class="pet-slot empty">5</span>
+                <span class="pet-slot empty">6</span>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>创建队伍战斗:</label>
+            <select id="difficulty">
+                <option value="EASY">简单</option>
+                <option value="MEDIUM" selected>中等</option>
+                <option value="HARD">困难</option>
+            </select>
+            <button onclick="createTeamBattle()">开始队伍PVE战斗</button>
+        </div>
+        <div id="apiLog" class="log" style="height: 150px; margin-top: 10px;"></div>
+    </div>
+
+    <div class="container">
+        <!-- 玩家1面板 -->
+        <div class="player-panel">
+            <h2>玩家1 <span id="status1" class="status status-disconnected">未连接</span></h2>
+
+            <div class="input-group">
+                <label>玩家ID:</label>
+                <input type="number" id="player1Id" value="1">
+            </div>
+
+            <div class="input-group">
+                <label>宠物ID:</label>
+                <input type="number" id="player1PetId" value="1">
+            </div>
+
+            <div class="input-group">
+                <label>房间ID:</label>
+                <input type="text" id="player1RoomId" placeholder="加入时需要">
+            </div>
+
+            <div>
+                <button onclick="connect(1)">连接WebSocket</button>
+                <button onclick="disconnect(1)">断开连接</button>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <button onclick="createRoom(1)" id="btnCreateRoom1">创建房间</button>
+                <button onclick="joinRoom(1)" id="btnJoinRoom1">加入房间</button>
+                <button onclick="matchmaking(1)" id="btnMatch1">随机匹配</button>
+            </div>
+
+            <div class="input-group" style="margin-top: 10px;">
+                <label>战斗ID:</label>
+                <input type="text" id="player1BattleId" placeholder="自动填充">
+            </div>
+
+            <div class="input-group">
+                <label>技能ID:</label>
+                <input type="number" id="player1SkillId" value="1">
+            </div>
+
+            <div>
+                <button onclick="selectSkill(1)" id="btnSelectSkill1">选择技能</button>
+            </div>
+
+            <!-- 切换宠物区域 -->
+            <div class="team-section">
+                <h3>切换宠物</h3>
+                <div class="input-group">
+                    <label>切换到位置:</label>
+                    <input type="number" id="player1SwitchIndex" value="1" min="0" max="5" style="width: 60px;">
+                    <button onclick="switchPet(1)" class="switch-btn">切换</button>
+                </div>
+                <div class="switch-buttons">
+                    <button onclick="switchPet(1, 0)" class="switch-btn">位置0</button>
+                    <button onclick="switchPet(1, 1)" class="switch-btn">位置1</button>
+                    <button onclick="switchPet(1, 2)" class="switch-btn">位置2</button>
+                    <button onclick="switchPet(1, 3)" class="switch-btn">位置3</button>
+                    <button onclick="switchPet(1, 4)" class="switch-btn">位置4</button>
+                    <button onclick="switchPet(1, 5)" class="switch-btn">位置5</button>
+                </div>
+            </div>
+
+            <div class="log" id="log1"></div>
+        </div>
+
+        <!-- 玩家2面板 -->
+        <div class="player-panel">
+            <h2>玩家2 <span id="status2" class="status status-disconnected">未连接</span></h2>
+
+            <div class="input-group">
+                <label>玩家ID:</label>
+                <input type="number" id="player2Id" value="2">
+            </div>
+
+            <div class="input-group">
+                <label>宠物ID:</label>
+                <input type="number" id="player2PetId" value="2">
+            </div>
+
+            <div class="input-group">
+                <label>房间ID:</label>
+                <input type="text" id="player2RoomId" placeholder="加入时需要">
+            </div>
+
+            <div>
+                <button onclick="connect(2)">连接WebSocket</button>
+                <button onclick="disconnect(2)">断开连接</button>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <button onclick="createRoom(2)" id="btnCreateRoom2">创建房间</button>
+                <button onclick="joinRoom(2)" id="btnJoinRoom2">加入房间</button>
+                <button onclick="matchmaking(2)" id="btnMatch2">随机匹配</button>
+            </div>
+
+            <div class="input-group" style="margin-top: 10px;">
+                <label>战斗ID:</label>
+                <input type="text" id="player2BattleId" placeholder="自动填充">
+            </div>
+
+            <div class="input-group">
+                <label>技能ID:</label>
+                <input type="number" id="player2SkillId" value="1">
+            </div>
+
+            <div>
+                <button onclick="selectSkill(2)" id="btnSelectSkill2">选择技能</button>
+            </div>
+
+            <!-- 切换宠物区域 -->
+            <div class="team-section">
+                <h3>切换宠物</h3>
+                <div class="input-group">
+                    <label>切换到位置:</label>
+                    <input type="number" id="player2SwitchIndex" value="1" min="0" max="5" style="width: 60px;">
+                    <button onclick="switchPet(2)" class="switch-btn">切换</button>
+                </div>
+                <div class="switch-buttons">
+                    <button onclick="switchPet(2, 0)" class="switch-btn">位置0</button>
+                    <button onclick="switchPet(2, 1)" class="switch-btn">位置1</button>
+                    <button onclick="switchPet(2, 2)" class="switch-btn">位置2</button>
+                    <button onclick="switchPet(2, 3)" class="switch-btn">位置3</button>
+                    <button onclick="switchPet(2, 4)" class="switch-btn">位置4</button>
+                    <button onclick="switchPet(2, 5)" class="switch-btn">位置5</button>
+                </div>
+            </div>
+
+            <div class="log" id="log2"></div>
+        </div>
+    </div>
+
+    <script>
+        const clients = {
+            1: null,
+            2: null
+        };
+
+        function log(player, message, type = 'info') {
+            const logDiv = document.getElementById(`log${player}`);
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function connect(player) {
+            const playerId = document.getElementById(`player${player}Id`).value;
+
+            // 修改这里的URL为你的后端地址
+            const socket = new SockJS('http://localhost:8888/ws/pvp');
+            const stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function(frame) {
+                log(player, '连接成功!', 'success');
+                document.getElementById(`status${player}`).textContent = '已连接';
+                document.getElementById(`status${player}`).className = 'status status-connected';
+
+                clients[player] = stompClient;
+
+                // 订阅房间消息（改用topic方式）
+                stompClient.subscribe(`/topic/player/${playerId}/queue/room`, function(message) {
+                    const data = JSON.parse(message.body);
+                    log(player, `房间创建: ${JSON.stringify(data)}`, 'success');
+                    document.getElementById(`player${player}RoomId`).value = data.roomId;
+                });
+
+                // 订阅对手加入消息
+                stompClient.subscribe(`/topic/player/${playerId}/queue/opponent`, function(message) {
+                    const data = JSON.parse(message.body);
+                    log(player, `对手加入: ${JSON.stringify(data)}`, 'success');
+                });
+
+                // 订阅战斗消息
+                stompClient.subscribe(`/topic/player/${playerId}/queue/battle`, function(message) {
+                    const data = JSON.parse(message.body);
+                    log(player, `战斗消息: ${JSON.stringify(data, null, 2)}`, 'info');
+
+                    if (data.battleId) {
+                        document.getElementById(`player${player}BattleId`).value = data.battleId;
+                    }
+                });
+
+                // 订阅错误消息
+                stompClient.subscribe(`/topic/player/${playerId}/queue/error`, function(message) {
+                    log(player, `错误: ${message.body}`, 'error');
+                });
+
+            }, function(error) {
+                log(player, `连接失败: ${error}`, 'error');
+                document.getElementById(`status${player}`).textContent = '未连接';
+                document.getElementById(`status${player}`).className = 'status status-disconnected';
+            });
+        }
+
+        function disconnect(player) {
+            if (clients[player]) {
+                clients[player].disconnect(function() {
+                    log(player, '已断开连接', 'info');
+                    document.getElementById(`status${player}`).textContent = '未连接';
+                    document.getElementById(`status${player}`).className = 'status status-disconnected';
+                    clients[player] = null;
+                });
+            }
+        }
+
+        function createRoom(player) {
+            if (!clients[player]) {
+                log(player, '请先连接WebSocket', 'error');
+                return;
+            }
+
+            const playerId = document.getElementById(`player${player}Id`).value;
+            const petId = document.getElementById(`player${player}PetId`).value;
+
+            const message = {
+                playerId: parseInt(playerId),
+                petId: parseInt(petId)
+            };
+
+            clients[player].send('/app/pvp/createRoom', {}, JSON.stringify(message));
+            log(player, `发送创建房间请求: ${JSON.stringify(message)}`, 'info');
+        }
+
+        function joinRoom(player) {
+            if (!clients[player]) {
+                log(player, '请先连接WebSocket', 'error');
+                return;
+            }
+
+            const playerId = document.getElementById(`player${player}Id`).value;
+            const petId = document.getElementById(`player${player}PetId`).value;
+            const roomId = document.getElementById(`player${player}RoomId`).value;
+
+            if (!roomId) {
+                log(player, '请输入房间ID', 'error');
+                return;
+            }
+
+            const message = {
+                playerId: parseInt(playerId),
+                petId: parseInt(petId),
+                roomId: roomId
+            };
+
+            clients[player].send('/app/pvp/joinRoom', {}, JSON.stringify(message));
+            log(player, `发送加入房间请求: ${JSON.stringify(message)}`, 'info');
+        }
+
+        function matchmaking(player) {
+            if (!clients[player]) {
+                log(player, '请先连接WebSocket', 'error');
+                return;
+            }
+
+            const playerId = document.getElementById(`player${player}Id`).value;
+            const petId = document.getElementById(`player${player}PetId`).value;
+
+            const message = {
+                playerId: parseInt(playerId),
+                petId: parseInt(petId)
+            };
+
+            clients[player].send('/app/pvp/matchmaking', {}, JSON.stringify(message));
+            log(player, `发送随机匹配请求: ${JSON.stringify(message)}`, 'info');
+        }
+
+        function selectSkill(player) {
+            if (!clients[player]) {
+                log(player, '请先连接WebSocket', 'error');
+                return;
+            }
+
+            const playerId = document.getElementById(`player${player}Id`).value;
+            const battleId = document.getElementById(`player${player}BattleId`).value;
+            const skillId = document.getElementById(`player${player}SkillId`).value;
+
+            if (!battleId) {
+                log(player, '请等待战斗开始', 'error');
+                return;
+            }
+
+            const message = {
+                playerId: parseInt(playerId),
+                battleId: battleId,
+                skillId: parseInt(skillId)
+            };
+
+            clients[player].send('/app/pvp/selectSkill', {}, JSON.stringify(message));
+            log(player, `发送技能选择: ${JSON.stringify(message)}`, 'info');
+        }
+
+        // ========== API 函数 ==========
+        const API_BASE = 'http://localhost:8888/api';
+
+        function apiLog(message, type = 'info') {
+            const logDiv = document.getElementById('apiLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function petLog(message, type = 'info') {
+            const logDiv = document.getElementById('petMgmtLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function skillLog(message, type = 'info') {
+            const logDiv = document.getElementById('skillMgmtLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // ========== 技能管理 API 函数 ==========
+
+        // 获取宠物可学习的技能
+        async function getAvailableSkills() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            if (!petId) {
+                skillLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/available-skills`);
+                const data = await response.json();
+                skillLog(`可学习技能: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillLog(`获取可学习技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 学习技能
+        async function learnSkill() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            const skillId = document.getElementById('learnSkillId').value;
+            const replacePosition = document.getElementById('replacePosition').value;
+
+            if (!petId || !skillId) {
+                skillLog('请输入宠物ID和技能ID', 'error');
+                return;
+            }
+
+            const requestBody = {
+                playerPetId: parseInt(petId),
+                skillId: parseInt(skillId)
+            };
+
+            // 如果有替换位置，添加到请求中
+            if (replacePosition && replacePosition.trim() !== '') {
+                requestBody.replacePosition = parseInt(replacePosition);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/learn-skill`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                skillLog(`学习技能: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillLog(`学习技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取已学会的技能
+        async function getLearnedSkills() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            if (!petId) {
+                skillLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/skills`);
+                const data = await response.json();
+                skillLog(`已学会技能: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillLog(`获取已学会技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取已装备的技能
+        async function getEquippedSkills() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            if (!petId) {
+                skillLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/skills/equipped`);
+                const data = await response.json();
+                skillLog(`已装备技能: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillLog(`获取已装备技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 装备技能
+        async function equipSkill() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            const skillId = document.getElementById('equipSkillId').value;
+            const position = document.getElementById('equipPosition').value;
+
+            if (!petId || !skillId || position === '') {
+                skillLog('请输入宠物ID、技能ID和位置', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/skills/${skillId}/equip?position=${position}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                skillLog(`装备技能: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                skillLog(`装备技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 卸下技能
+        async function unequipSkill() {
+            const petId = document.getElementById('skillMgmtPetId').value;
+            const skillId = document.getElementById('equipSkillId').value;
+
+            if (!petId || !skillId) {
+                skillLog('请输入宠物ID和技能ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/skills/${skillId}/unequip`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                skillLog(`卸下技能: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                skillLog(`卸下技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取所有技能
+        async function getAllSkills() {
+            try {
+                const response = await fetch(`${API_BASE}/pets/skills/all`);
+                const data = await response.json();
+                skillLog(`技能库: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillLog(`获取技能库失败: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== 技能创建 API 函数 ==========
+
+        function skillCreateLog(message, type = 'info') {
+            const logDiv = document.getElementById('skillCreateLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // 创建技能
+        async function createSkill() {
+            const name = document.getElementById('skillName').value;
+            const skillType = document.getElementById('skillType').value;
+            const petType = document.getElementById('skillPetType').value;
+            const power = document.getElementById('skillPower').value;
+            const accuracy = document.getElementById('skillAccuracy').value;
+            const maxPp = document.getElementById('skillMaxPp').value;
+            const priority = document.getElementById('skillPriority').value;
+            const statusEffect = document.getElementById('skillStatusEffect').value;
+            const effectChance = document.getElementById('skillEffectChance').value;
+            const description = document.getElementById('skillDescription').value;
+
+            if (!name || !power || !accuracy || !maxPp) {
+                skillCreateLog('请填写必填项：技能名称、威力、命中率、PP', 'error');
+                return;
+            }
+
+            const requestBody = {
+                name: name,
+                skillType: skillType,
+                petType: petType,
+                power: parseInt(power),
+                accuracy: parseInt(accuracy),
+                maxPp: parseInt(maxPp),
+                priority: priority ? parseInt(priority) : 0,
+                effectChance: effectChance ? parseInt(effectChance) : 0,
+                description: description || ''
+            };
+
+            // 如果选择了状态效果，添加到请求中
+            if (statusEffect && statusEffect !== '') {
+                requestBody.statusEffect = statusEffect;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/skills/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                skillCreateLog(`创建技能成功: ${JSON.stringify(data, null, 2)}`, 'success');
+
+                // 清空表单
+                document.getElementById('skillName').value = '';
+                document.getElementById('skillPower').value = '';
+                document.getElementById('skillAccuracy').value = '';
+                document.getElementById('skillMaxPp').value = '';
+                document.getElementById('skillPriority').value = '';
+                document.getElementById('skillEffectChance').value = '';
+                document.getElementById('skillDescription').value = '';
+            } catch (error) {
+                skillCreateLog(`创建技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 设置宠物升级学习技能
+        async function setPetLevelSkill() {
+            const templateId = document.getElementById('levelSkillTemplateId').value;
+            const skillId = document.getElementById('levelSkillId').value;
+            const learnLevel = document.getElementById('levelSkillLevel').value;
+
+            if (!templateId || !skillId || !learnLevel) {
+                skillCreateLog('请填写所有字段：宠物模板ID、技能ID、学习等级', 'error');
+                return;
+            }
+
+            const requestBody = {
+                petTemplateId: parseInt(templateId),
+                skillId: parseInt(skillId),
+                learnLevel: parseInt(learnLevel)
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/skills/set-level-skill`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                skillCreateLog(`设置成功: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillCreateLog(`设置失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 查看宠物模板的技能学习配置
+        async function getTemplateLevelSkills() {
+            const templateId = document.getElementById('levelSkillTemplateId').value;
+
+            if (!templateId) {
+                skillCreateLog('请输入宠物模板ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/templates/${templateId}/level-skills`);
+                const data = await response.json();
+                skillCreateLog(`技能学习配置: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                skillCreateLog(`获取配置失败: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== 宠物管理 API 函数 ==========
+
+        // 获取初始宠物列表
+        async function getStarterPets() {
+            try {
+                const response = await fetch(`${API_BASE}/pets/starters`);
+                const data = await response.json();
+                petLog(`初始宠物列表: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                petLog(`获取初始宠物失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取所有宠物模板
+        async function getAllTemplates() {
+            try {
+                const response = await fetch(`${API_BASE}/pets/templates`);
+                const data = await response.json();
+                petLog(`所有宠物模板: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                petLog(`获取宠物模板失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 捕获宠物
+        async function catchPet() {
+            const playerId = document.getElementById('petMgmtPlayerId').value;
+            const templateId = document.getElementById('catchTemplateId').value;
+            const nickname = document.getElementById('catchNickname').value;
+            const level = document.getElementById('catchLevel').value;
+
+            if (!templateId || !nickname) {
+                petLog('请输入模板ID和昵称', 'error');
+                return;
+            }
+
+            const requestBody = {
+                playerId: parseInt(playerId),
+                petTemplateId: parseInt(templateId),
+                nickname: nickname
+            };
+
+            // 如果有输入等级，则添加到请求中
+            if (level && level.trim() !== '') {
+                requestBody.level = parseInt(level);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/catch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                petLog(`捕获宠物成功: ${JSON.stringify(data, null, 2)}`, 'success');
+
+                // 刷新宠物列表
+                await getPlayerPets();
+            } catch (error) {
+                petLog(`捕获宠物失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 选择初始宠物
+        async function chooseStarter() {
+            const playerId = document.getElementById('petMgmtPlayerId').value;
+            const templateId = document.getElementById('starterTemplateId').value;
+            const nickname = document.getElementById('starterNickname').value;
+
+            if (!templateId || !nickname) {
+                petLog('请输入模板ID和昵称', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/choose-starter`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        playerId: parseInt(playerId),
+                        petTemplateId: parseInt(templateId),
+                        nickname: nickname
+                    })
+                });
+                const data = await response.json();
+                petLog(`选择初始宠物成功: ${JSON.stringify(data, null, 2)}`, 'success');
+
+                // 刷新宠物列表
+                await getPlayerPets();
+            } catch (error) {
+                petLog(`选择初始宠物失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取玩家的所有宠物
+        async function getPlayerPets() {
+            const playerId = document.getElementById('petMgmtPlayerId').value;
+            try {
+                const response = await fetch(`${API_BASE}/pets/player/${playerId}`);
+                const data = await response.json();
+                petLog(`我的宠物列表: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                petLog(`获取宠物列表失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取宠物详情
+        async function getPetDetail() {
+            const petId = document.getElementById('petOperationId').value;
+            if (!petId) {
+                petLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}`);
+                const data = await response.json();
+                petLog(`宠物详情: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                petLog(`获取宠物详情失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 治疗宠物
+        async function healPet() {
+            const petId = document.getElementById('petOperationId').value;
+            if (!petId) {
+                petLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/heal`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                petLog(`治疗宠物: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                petLog(`治疗宠物失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 治疗所有宠物
+        async function healAllPets() {
+            const playerId = document.getElementById('petMgmtPlayerId').value;
+            try {
+                const response = await fetch(`${API_BASE}/pets/player/${playerId}/heal-all`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                petLog(`治疗所有宠物: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                petLog(`治疗所有宠物失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取宠物技能
+        async function getPetSkills() {
+            const petId = document.getElementById('petOperationId').value;
+            if (!petId) {
+                petLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/pets/${petId}/skills`);
+                const data = await response.json();
+                petLog(`宠物技能: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                petLog(`获取宠物技能失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 查看队伍
+        async function getTeam() {
+            const playerId = document.getElementById('teamPlayerId').value;
+            try {
+                const response = await fetch(`${API_BASE}/team/${playerId}`);
+                const data = await response.json();
+                apiLog(`查看队伍: ${JSON.stringify(data)}`, 'success');
+
+                // 更新队伍显示
+                updateTeamDisplay(data.team || []);
+            } catch (error) {
+                apiLog(`查看队伍失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 设置队伍
+        async function setTeam() {
+            const playerId = document.getElementById('teamPlayerId').value;
+            const petIdsStr = document.getElementById('teamPetIds').value;
+
+            if (!petIdsStr.trim()) {
+                apiLog('请输入宠物ID', 'error');
+                return;
+            }
+
+            const petIds = petIdsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+            if (petIds.length === 0 || petIds.length > 6) {
+                apiLog('宠物数量必须在1-6之间', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/team/${playerId}/batch-set`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(petIds)
+                });
+                const data = await response.json();
+                apiLog(`设置队伍成功: ${JSON.stringify(data)}`, 'success');
+
+                // 刷新队伍显示
+                await getTeam();
+            } catch (error) {
+                apiLog(`设置队伍失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 清空队伍
+        async function clearTeam() {
+            const playerId = document.getElementById('teamPlayerId').value;
+            if (!confirm('确定要清空队伍吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/team/${playerId}/clear`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                apiLog(`清空队伍: ${JSON.stringify(data)}`, 'success');
+
+                // 清空显示
+                updateTeamDisplay([]);
+            } catch (error) {
+                apiLog(`清空队伍失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 创建队伍PVE战斗
+        async function createTeamBattle() {
+            const playerId = document.getElementById('teamPlayerId').value;
+            const petIdsStr = document.getElementById('teamPetIds').value;
+            const difficulty = document.getElementById('difficulty').value;
+
+            if (!petIdsStr.trim()) {
+                apiLog('请先设置队伍（输入宠物ID）', 'error');
+                return;
+            }
+
+            const petIds = petIdsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+            if (petIds.length === 0 || petIds.length > 6) {
+                apiLog('宠物数量必须在1-6之间', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/battle/pve/team/start?playerId=${playerId}&difficulty=${difficulty}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(petIds)
+                });
+                const data = await response.json();
+                apiLog(`创建队伍战斗: ${JSON.stringify(data, null, 2)}`, 'success');
+
+                // 自动填充战斗ID到玩家1
+                if (data.data && data.data.battleId) {
+                    document.getElementById('player1BattleId').value = data.data.battleId;
+                    log(1, `队伍战斗已创建，战斗ID: ${data.data.battleId}`, 'success');
+                }
+            } catch (error) {
+                apiLog(`创建队伍战斗失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 更新队伍显示
+        function updateTeamDisplay(team) {
+            const display = document.getElementById('teamDisplay');
+            display.innerHTML = '';
+
+            for (let i = 0; i < 6; i++) {
+                const slot = document.createElement('span');
+                slot.className = 'pet-slot';
+
+                const member = team.find(t => t.position === i + 1);
+                if (member && member.playerPetId) {
+                    slot.textContent = member.playerPetId;
+                    slot.title = `位置${i + 1}: 宠物ID ${member.playerPetId}`;
+                } else {
+                    slot.className = 'pet-slot empty';
+                    slot.textContent = i + 1;
+                    slot.title = `位置${i + 1}: 空`;
+                }
+
+                display.appendChild(slot);
+            }
+        }
+
+        // 切换宠物
+        async function switchPet(player, index) {
+            const battleId = document.getElementById(`player${player}BattleId`).value;
+            const playerId = document.getElementById(`player${player}Id`).value;
+
+            // 如果没有指定index，从输入框获取
+            if (index === undefined) {
+                index = parseInt(document.getElementById(`player${player}SwitchIndex`).value);
+            }
+
+            if (!battleId) {
+                log(player, '请先创建战斗', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/battle/${battleId}/switch?playerId=${playerId}&switchToIndex=${index}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                log(player, `切换宠物到位置${index}: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                log(player, `切换宠物失败: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -16,4 +16,9 @@ public class PetCreateRequest {
     private Long petTemplateId;
 
     private String nickname;
+
+    /**
+     * 初始等级（可选，默认5级）
+     */
+    private Integer level;
 }

@@ -38,6 +38,11 @@ public class PetManagementServiceImpl implements IPetManagementService {
     }
 
     @Override
+    public List<PetTemplate> getAllPetTemplates() {
+        return petTemplateMapper.findAll();
+    }
+
+    @Override
     @Transactional
     public PlayerPet chooseStarterPet(Long playerId, Long petTemplateId, String nickname) {
         PetTemplate template = petTemplateMapper.selectById(petTemplateId);

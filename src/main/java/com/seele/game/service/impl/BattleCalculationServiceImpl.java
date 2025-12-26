@@ -1,5 +1,6 @@
 package com.seele.game.service.impl;
 
+import com.seele.game.battle.BattleAction;
 import com.seele.game.battle.BattlePetState;
 import com.seele.game.entity.PetTemplate;
 import com.seele.game.entity.Skill;
@@ -22,7 +23,7 @@ public class BattleCalculationServiceImpl implements IBattleCalculationService {
     private final Random random = new Random();
 
     @Override
-    public int calculateDamage(BattlePetState attacker, BattlePetState defender, Skill skill) {
+    public int calculateDamage(BattlePetState attacker, BattlePetState defender, Skill skill, boolean isCritical) {
         // 变化类技能不造成伤害
         if (skill.getSkillType() == SkillType.STATUS) {
             return 0;
@@ -56,8 +57,8 @@ public class BattleCalculationServiceImpl implements IBattleCalculationService {
         // 随机系数 (0.85 - 1.0)
         double randomFactor = 0.85 + random.nextDouble() * 0.15;
 
-        // 暴击倍率
-        double criticalMultiplier = checkCritical() ? 2.0 : 1.0;
+        // 暴击倍率（使用传入的判定结果）
+        double criticalMultiplier = isCritical ? 2.0 : 1.0;
 
         // 最终伤害
         int finalDamage = (int) (baseDamage * typeEffectiveness * randomFactor * criticalMultiplier);
@@ -170,5 +171,28 @@ public class BattleCalculationServiceImpl implements IBattleCalculationService {
             default:
                 return null;
         }
+    }
+
+    @Override
+    public boolean determineFirstMove(BattlePetState pet1, BattleAction action1, BattlePetState pet2, BattleAction action2) {
+        // 获取动作优先度
+        int priority1 = action1.getPriority();
+        int priority2 = action2.getPriority();
+
+        // 1. 优先级高的先行动
+        if (priority1 != priority2) {
+            return priority1 > priority2;
+        }
+
+        // 2. 优先级相同时，比较速度
+        int speed1 = getEffectiveSpeed(pet1);
+        int speed2 = getEffectiveSpeed(pet2);
+
+        if (speed1 != speed2) {
+            return speed1 > speed2;
+        }
+
+        // 3. 速度也相同时，随机决定
+        return random.nextBoolean();
     }
 }

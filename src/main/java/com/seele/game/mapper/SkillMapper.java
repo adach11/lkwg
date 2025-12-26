@@ -47,4 +47,9 @@ public interface SkillMapper {
      * 根据名称查找技能
      */
     Skill findByName(String name);
+
+    /**
+     * 查找所有技能
+     */
+    List<Skill> findAll();
 }

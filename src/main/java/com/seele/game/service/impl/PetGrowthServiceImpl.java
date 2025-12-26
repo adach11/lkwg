@@ -96,11 +96,11 @@ public class PetGrowthServiceImpl implements IPetGrowthService {
         playerPet.setMagicAttack(calculateStat(template, playerPet, StatType.MAGIC_ATTACK, level));
         playerPet.setMagicDefense(calculateStat(template, playerPet, StatType.MAGIC_DEFENSE, level));
         playerPet.setSpeed(calculateStat(template, playerPet, StatType.SPEED, level));
-
+        playerPet.setCurrentHp(playerPet.getMaxHp());
         // 如果当前HP超过最大HP，调整为最大HP
-        if (playerPet.getCurrentHp() > playerPet.getMaxHp()) {
-            playerPet.setCurrentHp(playerPet.getMaxHp());
-        }
+//        if (playerPet.getCurrentHp() > playerPet.getMaxHp()) {
+//            playerPet.setCurrentHp(playerPet.getMaxHp());
+//        }
     }
 
     /**

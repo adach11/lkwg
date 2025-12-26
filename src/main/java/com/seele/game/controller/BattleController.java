@@ -92,7 +92,51 @@ public class BattleController {
     }
 
     /**
-     * 构建战斗状态响应
+     * 创建队伍PVE战斗
+     */
+    @PostMapping("/pve/team/start")
+    public ApiResponse<BattleStateResponse> startTeamPveBattle(
+            @RequestParam Long playerId,
+            @RequestBody Long[] petIds,
+            @RequestParam String difficulty) {
+        try {
+            BattleState battle = battleService.createTeamPveBattle(
+                    playerId,
+                    petIds,
+                    com.seele.game.enums.AIDifficulty.valueOf(difficulty.toUpperCase())
+            );
+
+            BattleStateResponse response = buildTeamBattleStateResponse(battle);
+            return ApiResponse.success("队伍战斗创建成功！", response);
+        } catch (Exception e) {
+            log.error("创建队伍战斗失败", e);
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 切换宠物
+     */
+    @PostMapping("/{battleId}/switch")
+    public ApiResponse<String> switchPet(
+            @PathVariable String battleId,
+            @RequestParam Long playerId,
+            @RequestParam int switchToIndex) {
+        try {
+            boolean ready = battleService.submitSwitchPet(battleId, playerId, switchToIndex);
+            if (ready) {
+                return ApiResponse.success("切换宠物成功，双方已准备好！");
+            } else {
+                return ApiResponse.success("切换宠物成功，等待对手选择...");
+            }
+        } catch (Exception e) {
+            log.error("切换宠物失败", e);
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 构建战斗状态响应（单宠物模式）
      */
     private BattleStateResponse buildBattleStateResponse(BattleState battle) {
         return BattleStateResponse.builder()
@@ -101,8 +145,27 @@ public class BattleController {
                 .currentTurn(battle.getCurrentTurn())
                 .playerPet(buildPetInfo(battle.getPlayerPet()))
                 .aiPet(buildPetInfo(battle.getAiPet()))
-                .aiTrainerName(battle.getAiTrainer().getName())
+                .aiTrainerName(battle.getAiTrainer() != null ? battle.getAiTrainer().getName() : null)
                 .availableSkills(buildSkillInfoList(battle.getPlayerPet()))
+                .build();
+    }
+
+    /**
+     * 构建战斗状态响应（队伍模式）
+     */
+    private BattleStateResponse buildTeamBattleStateResponse(BattleState battle) {
+        if (!battle.isTeamMode()) {
+            return buildBattleStateResponse(battle);
+        }
+
+        return BattleStateResponse.builder()
+                .battleId(battle.getBattleId())
+                .status(battle.getStatus())
+                .currentTurn(battle.getCurrentTurn())
+                .playerPet(buildPetInfo(battle.getPlayer1ActivePet()))
+                .aiPet(buildPetInfo(battle.getPlayer2ActivePet()))
+                .aiTrainerName(battle.getAiTrainer() != null ? battle.getAiTrainer().getName() : "对手")
+                .availableSkills(buildSkillInfoList(battle.getPlayer1ActivePet()))
                 .build();
     }
 

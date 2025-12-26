@@ -33,5 +33,5 @@ server:
 logging:
   level:
     root: INFO
-    com.seele.petbattle: DEBUG
-    com.seele.petbattle.mapper: DEBUG  # Mapper日志
+    com.seele.game: DEBUG
+    com.seele.game.mapper: DEBUG  # Mapper日志

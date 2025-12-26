@@ -4,8 +4,8 @@ package com.seele.game.enums;
  * 战斗行动类型枚举
  */
 public enum BattleActionType {
-    ATTACK("攻击"),
-    SWITCH_PET("换宠"),
+    USE_SKILL("使用技能"),
+    SWITCH_PET("切换宠物"),
     USE_ITEM("使用道具"),
     FLEE("逃跑");
 
